@@ -1,70 +1,60 @@
-<script src="https://d3js.org/d3.v6.min.js"></script>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Horizontal Bar Chart</title>
+    <script src="https://d3js.org/d3.v6.min.js"></script>
+    <style>
+        #visualization {
+            position: absolute;
+            left: 50%; /* Adjust left position to center horizontally or move to right */
+            transform: translateX(-50%); /* Center the SVG container horizontally */
+            background-color: #f0f0f0;
+            padding: 20px;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
 
-<style>
-    rect {
-        fill: lightblue;
-        stroke: black;
-    }
-</style>
-<svg id="visualization" width="300" height="300"></svg>
+<div id="visualization"></div>
+
 <script>
-    // Data for the bar chart
     var data = [1, 12, 43, 56, 63];
 
-    // Dimensions for the SVG
-    var width = 300;
-    var height = 300;
     var margin = { top: 20, right: 20, bottom: 30, left: 40 };
+    var width = 600 - margin.left - margin.right; // Adjust width based on your layout
+    var height = 400 - margin.top - margin.bottom; // Adjust height based on your layout
 
-    // Create SVG element
+    var xScale = d3.scaleLinear()
+                   .domain([0, d3.max(data)])  // Assuming data represents values on the x-axis
+                   .range([0, width]);
+
+    var yScale = d3.scaleBand()
+                   .domain(d3.range(data.length))  // Assuming each data point corresponds to a category
+                   .range([0, height])
+                   .padding(0.1);
+
     var svg = d3.select("#visualization")
                 .append("svg")
-                .attr("width", width)
-                .attr("height", height);
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom)
+                .append("g")
+                .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-    var xScale = d3.scaleBand()
-               .domain(d3.range(data.length))  // Assuming each data point corresponds to a category
-               .range([0, width])
-               .padding(0.1);
-
-    var yScale = d3.scaleLinear()
-               .domain([0, d3.max(data)])  // Assuming data represents values on the y-axis
-               .range([height, 0]);
-    // X-axis
-    svg.append("g")
-       .attr("transform", "translate(0," + height + ")")
-       .call(d3.axisBottom(xScale).ticks(data.length)  // Adjust the number of ticks based on data length
-           .tickFormat(function(d, i) {
-               // Format tick labels if needed
-               return "Label " + i;
-           }));
-
-    // Y-axis
-    svg.append("g")
-       .call(d3.axisLeft(yScale)
-         .ticks(5)  // Adjust the number of ticks as needed
-           .tickSize(-width));  // Draw ticks inside the SVG area
-
-    
-    
-    
-    // Create rectangles for each data point (bar chart)
+    // Create rectangles for each data point (horizontal bars)
     var bars = svg.selectAll("rect")
                   .data(data)
                   .enter()
                   .append("rect")
-                  .attr("x", function(d, i) { return i * 50; }) // Adjust the spacing between bars
-                  .attr("y", function(d) { return height - d * 5; }) // Invert y-axis for correct orientation
-                  .attr("width", 40) // Width of each bar
-                  .attr("height", function(d) { return d * 5; }); // Scale height based on data
-    svg.append("text")
-   .attr("transform", "rotate(-90)")
-   .attr("y", 0 - margin.left)
-   .attr("x", 0 - (height / 2))
-   .attr("dy", "1em")
-   .style("text-anchor", "middle")
-   .text("Y Axis Label");
-    
+                  .attr("x", 0) // Start x from the left edge
+                  .attr("y", function(d, i) { return yScale(i); }) // Position vertically using yScale
+                  .attr("width", function(d) { return xScale(d); }) // Scale width based on data value
+                  .attr("height", yScale.bandwidth()) // Fixed height based on yScale bandwidth
+                  .attr("fill", "lightblue")
+                  .attr("stroke", "black");
+
     // Add tooltips or interaction (you can customize this based on your needs)
     bars.on("mouseover", function(d) {
             d3.select(this)
@@ -75,12 +65,22 @@
               .attr("fill", "lightblue");
         });
 
-    // X-axis label
+    // X-axis label (if needed)
     svg.append("text")
        .attr("x", width / 2)
        .attr("y", height + margin.bottom)
        .attr("text-anchor", "middle")
        .text("X Axis Label");
+
+    // Y-axis label (if needed)
+    svg.append("text")
+       .attr("transform", "rotate(-90)")
+       .attr("y", 0 - margin.left)
+       .attr("x", 0 - (height / 2))
+       .attr("dy", "1em")
+       .style("text-anchor", "middle")
+       .text("Y Axis Label");
 </script>
 
-
+</body>
+</html>
