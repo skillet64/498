@@ -57,7 +57,14 @@
                   .attr("y", function(d) { return height - d * 5; }) // Invert y-axis for correct orientation
                   .attr("width", 40) // Width of each bar
                   .attr("height", function(d) { return d * 5; }); // Scale height based on data
-
+    svg.append("text")
+   .attr("transform", "rotate(-90)")
+   .attr("y", 0 - margin.left)
+   .attr("x", 0 - (height / 2))
+   .attr("dy", "1em")
+   .style("text-anchor", "middle")
+   .text("Y Axis Label");
+    
     // Add tooltips or interaction (you can customize this based on your needs)
     bars.on("mouseover", function(d) {
             d3.select(this)
