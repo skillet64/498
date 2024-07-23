@@ -33,11 +33,17 @@
     // X-axis
     svg.append("g")
        .attr("transform", "translate(0," + height + ")")
-       .call(d3.axisBottom(xScale));
+       .call(d3.axisBottom(xScale).ticks(data.length)  // Adjust the number of ticks based on data length
+           .tickFormat(function(d, i) {
+               // Format tick labels if needed
+               return "Label " + i;
+           }));
 
     // Y-axis
     svg.append("g")
-       .call(d3.axisLeft(yScale));
+       .call(d3.axisLeft(yScale)
+         .ticks(5)  // Adjust the number of ticks as needed
+           .tickSize(-width));  // Draw ticks inside the SVG area
 
     
     
