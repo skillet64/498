@@ -21,7 +21,14 @@
 <div id="visualization"></div>
 
 <script>
-    var data = [1, 12, 43, 56, 63];
+     var csvUrl = 'https://raw.githubusercontent.com/your-username/your-repo/main/data.csv';
+
+    // Load data from CSV file
+    d3.csv(csvUrl).then(function(data) {
+        // Convert numeric data from string to number
+        data.forEach(function(d) {
+            d.value = +d.value; // Assuming 'value' column contains numeric data
+        });
 
     var margin = { top: 20, right: 20, bottom: 30, left: 40 };
     var width = 600 - margin.left - margin.right; // Adjust width based on your layout
