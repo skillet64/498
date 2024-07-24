@@ -17,8 +17,14 @@
         }
 
         .content {
-            margin-left: 20px; /* Adjust as needed */
-            margin-bottom: 20px; /* Adjust as needed */
+            position: absolute;
+            top: 50%; /* Adjust top position as needed */
+            left: 50px; /* Adjust left position as needed */
+            transform: translateY(-50%);
+            background-color: #f0f0f0;
+            padding: 20px;
+            border-radius: 5px;
+            width: 300px; /* Set a fixed width or adjust as needed */
         }
 
         .reverse-container {
@@ -33,7 +39,14 @@
         }
 
         .reverse-content {
-            margin-left: 20px; /* Adjust as needed */
+            position: absolute;
+            bottom: 50%; /* Adjust bottom position as needed */
+            right: 50px; /* Adjust right position as needed */
+            transform: translateY(50%);
+            background-color: #f0f0f0;
+            padding: 20px;
+            border-radius: 5px;
+            width: 300px; /* Set a fixed width or adjust as needed */
         }
     </style>
 </head>
@@ -46,14 +59,15 @@
     </div>
 
     <!-- Reversed Below -->
+    <div class="reverse-content">
+        <p>This is the reversed paragraph on the right side.</p>
+    </div>
     <div class="reverse-container">
         <p>This is the reversed container on the left side.</p>
     </div>
-    <div class="reverse-content">
-        <p>This is a paragraph on the right side (reversed).</p>
-    </div>
 </body>
 </html>
+
 
 
 </body>
