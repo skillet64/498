@@ -35,8 +35,7 @@
 
 <script>
     
-    var csvUrl = './goals.csv', function (error, data) {
-  if (error) throw error;
+    var csvUrl = 'goals.csv';
 
     // Load data from CSV file
     d3.csv(csvUrl).then(function(data) {
