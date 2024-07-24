@@ -3,104 +3,58 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Horizontal Bar Chart with CSV Data</title>
-    <script src="https://d3js.org/d3.v6.min.js"></script>
+    <title>Right Container and Left Paragraph (Reversed Below)</title>
     <style>
-        #visualization {
+        .container {
             position: absolute;
-            left: 50%; /* Adjust left position to center horizontally or move to right */
-            transform: translateX(-50%); /* Center the SVG container horizontally */
+            top: 50%; /* Adjust top position as needed */
+            right: 50px; /* Adjust right position as needed */
+            transform: translateY(-50%);
             background-color: #f0f0f0;
             padding: 20px;
             border-radius: 5px;
+            width: 300px; /* Set a fixed width or adjust as needed */
+        }
+
+        .content {
+            margin-left: 20px; /* Adjust as needed */
+            margin-bottom: 20px; /* Adjust as needed */
+        }
+
+        .reverse-container {
+            position: absolute;
+            bottom: 50%; /* Adjust bottom position as needed */
+            left: 50px; /* Adjust left position as needed */
+            transform: translateY(50%);
+            background-color: #f0f0f0;
+            padding: 20px;
+            border-radius: 5px;
+            width: 300px; /* Set a fixed width or adjust as needed */
+        }
+
+        .reverse-content {
+            margin-left: 20px; /* Adjust as needed */
         }
     </style>
 </head>
 <body>
+    <div class="content">
+        <p>This is a paragraph on the left side.</p>
+    </div>
+    <div class="container">
+        <p>This is the container on the right side.</p>
+    </div>
 
-<div id="visualization"></div>
+    <!-- Reversed Below -->
+    <div class="reverse-container">
+        <p>This is the reversed container on the left side.</p>
+    </div>
+    <div class="reverse-content">
+        <p>This is a paragraph on the right side (reversed).</p>
+    </div>
+</body>
+</html>
 
-<script>
-    // URL of the CSV file hosted on GitHub
-    var csvUrl = 'goals.csv';
-
-    // Load data from CSV file
-    d3.csv(csvUrl).then(function(data) {
-        // Convert numeric data from string to number
-        data.forEach(function(d) {
-            d.goals_scored = +d.goals_scored; // Convert goals_scored to number
-        });
-
-        var margin = { top: 20, right: 20, bottom: 30, left: 40 };
-        var width = 600 - margin.left - margin.right; // Adjust width based on your layout
-        var height = 400 - margin.top - margin.bottom; // Adjust height based on your layout
-
-        var xScale = d3.scaleLinear()
-                       .domain([0, d3.max(data, function(d) { return d.goals_scored; })])  // Dynamic domain based on data
-                       .range([0, width]);
-
-        var yScale = d3.scaleBand()
-                       .domain(data.map(function(d) { return d.player; }))  // Use 'player' column for y-axis
-                       .range([0, height])
-                       .padding(0.1);
-
-        var svg = d3.select("#visualization")
-                    .append("svg")
-                    .attr("width", width + margin.left + margin.right)
-                    .attr("height", height + margin.top + margin.bottom)
-                    .append("g")
-                    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-
-        // Create rectangles for each data point (horizontal bars)
-        var bars = svg.selectAll("rect")
-                      .data(data)
-                      .enter()
-                      .append("rect")
-                      .attr("x", 0) // Start x from the left edge
-                      .attr("y", function(d) { return yScale(d.player); }) // Position vertically using yScale
-                      .attr("width", function(d) { return xScale(d.goals_scored); }) // Scale width based on data value
-                      .attr("height", yScale.bandwidth()) // Fixed height based on yScale bandwidth
-                      .attr("fill", "lightblue")
-                      .attr("stroke", "black");
-
-        // Add tooltips or interaction (you can customize this based on your needs)
-        bars.on("mouseover", function(d) {
-                d3.select(this)
-                  .attr("fill", "orange");
-            })
-            .on("mouseout", function(d) {
-                d3.select(this)
-                  .attr("fill", "lightblue");
-            });
-
-        // X-axis label (if needed)
-        svg.append("text")
-           .attr("x", width / 2)
-           .attr("y", height + margin.bottom)
-           .attr("text-anchor", "middle")
-           .text("Goals Scored");
-
-        // Y-axis label (if needed)
-        svg.append("text")
-           .attr("transform", "rotate(-90)")
-           .attr("y", 0 - margin.left)
-           .attr("x", 0 - (height / 2))
-           .attr("dy", "1em")
-           .style("text-anchor", "middle")
-           .text("Player");
-
-        // Add Y-axis with string data (player names)
-        var yAxis = d3.axisLeft(yScale);
-        svg.append("g")
-           .call(yAxis);
-
-        // Add X-axis with numeric data (goals scored)
-        var xAxis = d3.axisBottom(xScale);
-        svg.append("g")
-           .attr("transform", "translate(0," + height + ")")
-           .call(xAxis);
-    });
-</script>
 
 </body>
 </html>
