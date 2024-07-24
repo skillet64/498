@@ -28,7 +28,7 @@
     d3.csv(csvUrl).then(function(data) {
         // Convert numeric data from string to number
         data.forEach(function(d) {
-            d.goals_scored = +d.goals_scored; // Convert goals_scored to number
+            d.goals = +d.goals; // Convert goals_scored to number
         });
 
         var margin = { top: 20, right: 20, bottom: 30, left: 40 };
@@ -36,7 +36,7 @@
         var height = 400 - margin.top - margin.bottom; // Adjust height based on your layout
 
         var xScale = d3.scaleLinear()
-                       .domain([0, d3.max(data, function(d) { return d.goals_scored; })])  // Dynamic domain based on data
+                       .domain([0, d3.max(data, function(d) { return d.goals; })])  // Dynamic domain based on data
                        .range([0, width]);
 
         var yScale = d3.scaleBand()
@@ -58,7 +58,7 @@
                       .append("rect")
                       .attr("x", 0) // Start x from the left edge
                       .attr("y", function(d) { return yScale(d.player); }) // Position vertically using yScale
-                      .attr("width", function(d) { return xScale(d.goals_scored); }) // Scale width based on data value
+                      .attr("width", function(d) { return xScale(d.goals); }) // Scale width based on data value
                       .attr("height", yScale.bandwidth()) // Fixed height based on yScale bandwidth
                       .attr("fill", "lightblue")
                       .attr("stroke", "black");
