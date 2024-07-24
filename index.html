@@ -3,73 +3,57 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Euro 2024</title>
+    <title>D3.js Example: Content Hugging Container</title>
     <style>
         .container {
-            position: relative;
-            top: 50%; /* Adjust top position as needed */
-            right: 50px; /* Adjust right position as needed */
-            transform: translateY(-50%);
+            width: 300px;
+            height: 200px;
             background-color: #f0f0f0;
             padding: 20px;
             border-radius: 5px;
-            width: 300px; /* Set a fixed width or adjust as needed */
+            overflow: hidden; /* Ensure content does not overflow */
+            position: relative; /* For positioning content absolutely */
         }
 
         .content {
             position: absolute;
-            top: 50%; /* Adjust top position as needed */
-            left: 50px; /* Adjust left position as needed */
-            transform: translateY(-50%);
-            background-color: #f0f0f0;
-            padding: 20px;
-            border-radius: 5px;
-            width: 300px; /* Set a fixed width or adjust as needed */
-        }
-
-        .reverse-container {
-            position: relative;
-            bottom: 50%; /* Adjust bottom position as needed */
-            left: 50px; /* Adjust left position as needed */
-            transform: translateY(50%);
-            background-color: #f0f0f0;
-            padding: 20px;
-            border-radius: 5px;
-            width: 300px; /* Set a fixed width or adjust as needed */
-        }
-
-        .reverse-content {
-            position: absolute;
-            bottom: 50%; /* Adjust bottom position as needed */
-            right: 50px; /* Adjust right position as needed */
-            transform: translateY(50%);
-            background-color: #f0f0f0;
-            padding: 20px;
-            border-radius: 5px;
-            width: 300px; /* Set a fixed width or adjust as needed */
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center; /* Center align text */
+            font-size: 14px; /* Example font size */
         }
     </style>
 </head>
 <body>
-    <div class="content">
-        <p>This is a paragraph on the left side.</p>
-    </div>
-    <div class="container">
-        <p>This is the container on the right side.</p>
+    <div class="container" id="container">
+        <div class="content" id="content">
+            <p>This is some content that will dynamically hug the container.</p>
+        </div>
     </div>
 
-    <!-- Reversed Below -->
-    <div class="reverse-content">
-        <p>This is the reversed paragraph on the right side.</p>
-    </div>
-    <div class="reverse-container">
-        <p>This is the reversed container on the left side.</p>
-    </div>
+    <!-- Include D3.js library -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+
+    <!-- Your D3.js script -->
+    <script>
+        // Get container and content elements using D3.js
+        const container = d3.select('#container');
+        const content = d3.select('#content');
+
+        // Function to adjust content size based on container size
+        function adjustContentSize() {
+            const containerWidth = container.node().offsetWidth; // Get container width
+            const containerHeight = container.node().offsetHeight; // Get container height
+
+            // Adjust content font size based on container dimensions
+            const fontSize = Math.min(containerWidth / 15, containerHeight / 10); // Adjust multiplier for desired scaling
+            content.style('font-size', `${fontSize}px`);
+        }
+
+        // Call adjustContentSize initially and on window resize
+        adjustContentSize();
+        window.addEventListener('resize', adjustContentSize);
+    </script>
 </body>
 </html>
-
-
-
-</body>
-</html>
-
