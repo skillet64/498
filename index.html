@@ -34,8 +34,9 @@
 <div id="visualization"></div>
 
 <script>
-    // URL of the CSV file hosted on GitHub
-    var csvUrl = 'goals.csv';
+    
+    var csvUrl = './goals.csv', function (error, data) {
+  if (error) throw error;
 
     // Load data from CSV file
     d3.csv(csvUrl).then(function(data) {
