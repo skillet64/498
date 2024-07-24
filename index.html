@@ -39,81 +39,101 @@
 
     // Load data from CSV file
     d3.csv(csvUrl).then(function(data) {
-        // Convert numeric data from string to number
-        data.forEach(function(d) {
-            d.goals = +d.goals; // Convert goals to number
+    // Convert numeric data from string to number
+    data.forEach(function(d) {
+        d.goals = +d.goals; // Convert goals to number
+    });
+
+    var margin = { top: 20, right: 20, bottom: 30, left: 120 }; // Adjusted left margin for SVG
+    var width = 600 - margin.left - margin.right; // Adjust width based on your layout
+    var height = 400 - margin.top - margin.bottom; // Adjust height based on your layout
+
+    var xScale = d3.scaleLinear()
+                   .domain([0, d3.max(data, function(d) { return d.goals; })])  // Dynamic domain based on data
+                   .range([0, width]);
+
+    var yScale = d3.scaleBand()
+                   .domain(data.map(function(d) { return d.player; }))  // Use 'player' column for y-axis
+                   .range([0, height])
+                   .padding(0.1);
+
+    var svg = d3.select("#visualization")
+                .append("svg")
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom)
+                .append("g")
+                .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+    // Create rectangles for each data point (horizontal bars)
+    var bars = svg.selectAll("rect")
+                  .data(data)
+                  .enter()
+                  .append("rect")
+                  .attr("x", 0) // Start x from the left edge
+                  .attr("y", function(d) { return yScale(d.player); }) // Position vertically using yScale
+                  .attr("width", function(d) { return xScale(d.goals); }) // Scale width based on data value
+                  .attr("height", yScale.bandwidth()) // Fixed height based on yScale bandwidth
+                  .attr("fill", "lightblue")
+                  .attr("stroke", "black");
+
+    // Add tooltips or interaction (you can customize this based on your needs)
+    bars.on("mouseover", function(d) {
+            d3.select(this)
+              .attr("fill", "orange");
+
+            // Show tooltip with goals scored
+            var tooltip = d3.select("#visualization")
+                            .append("div")
+                            .attr("class", "tooltip")
+                            .style("position", "absolute")
+                            .style("background-color", "white")
+                            .style("border", "solid")
+                            .style("border-width", "1px")
+                            .style("border-radius", "5px")
+                            .style("padding", "10px")
+                            .style("pointer-events", "none");
+
+            tooltip.html("<strong>Goals:</strong> " + d.goals)
+                   .style("left", (d3.event.pageX + 10) + "px")
+                   .style("top", (d3.event.pageY - 20) + "px");
+        })
+        .on("mouseout", function(d) {
+            d3.select(this)
+              .attr("fill", "lightblue");
+
+            // Remove tooltip on mouseout
+            d3.select(".tooltip").remove();
         });
 
-        var margin = { top: 20, right: 20, bottom: 30, left: 80 }; // Adjusted left margin for SVG
-        var width = 600 - margin.left - margin.right; // Adjust width based on your layout
-        var height = 400 - margin.top - margin.bottom; // Adjust height based on your layout
+    // X-axis label (if needed)
+    svg.append("text")
+       .attr("x", width / 2)
+       .attr("y", height + margin.bottom)
+       .attr("text-anchor", "middle")
+       .text("Goals Scored");
 
-        var xScale = d3.scaleLinear()
-                       .domain([0, d3.max(data, function(d) { return d.goals; })])  // Dynamic domain based on data
-                       .range([0, width]);
+    // Y-axis label (if needed)
+    svg.append("text")
+       .attr("transform", "rotate(-90)")
+       .attr("y", 0 - margin.left)
+       .attr("x", 0 - (height / 2))
+       .attr("dy", "1em")
+       .style("text-anchor", "middle")
+       
 
-        var yScale = d3.scaleBand()
-                       .domain(data.map(function(d) { return d.player; }))  // Use 'player' column for y-axis
-                       .range([0, height])
-                       .padding(0.1);
+    // Add Y-axis with player names as ticks
+    var yAxis = d3.axisLeft(yScale);
+    svg.append("g")
+       .call(yAxis)
+       .selectAll("text")
+       .style("text-anchor", "end")
+       .attr("dx", "-.8em")
+       .attr("dy", ".15em")
+       .attr("transform", "rotate(-65)");
 
-        var svg = d3.select("#visualization")
-                    .append("svg")
-                    .attr("width", width + margin.left + margin.right)
-                    .attr("height", height + margin.top + margin.bottom)
-                    .append("g")
-                    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-
-        // Create rectangles for each data point (horizontal bars)
-        var bars = svg.selectAll("rect")
-                      .data(data)
-                      .enter()
-                      .append("rect")
-                      .attr("x", 0) // Start x from the left edge
-                      .attr("y", function(d) { return yScale(d.player); }) // Position vertically using yScale
-                      .attr("width", function(d) { return xScale(d.goals); }) // Scale width based on data value
-                      .attr("height", yScale.bandwidth()) // Fixed height based on yScale bandwidth
-                      .attr("fill", "lightblue")
-                      .attr("stroke", "black");
-
-        // Add tooltips or interaction (you can customize this based on your needs)
-        bars.on("mouseover", function(d) {
-                d3.select(this)
-                  .attr("fill", "orange");
-            })
-            .on("mouseout", function(d) {
-                d3.select(this)
-                  .attr("fill", "lightblue");
-            });
-
-        // X-axis label (if needed)
-        svg.append("text")
-           .attr("x", width / 2)
-           .attr("y", height + margin.bottom)
-           .attr("text-anchor", "middle")
-           .text("Goals Scored");
-
-        // Y-axis label (if needed)
-        svg.append("text")
-           .attr("transform", "rotate(-90)")
-           .attr("y", 0 - margin.left)
-           .attr("x", 0 - (height / 2))
-           .attr("dy", "1em")
-           .style("text-anchor", "middle")
-           .text("Player");
-
-        // Add Y-axis with string data (player names)
-        var yAxis = d3.axisLeft(yScale);
-        svg.append("g")
-           .call(yAxis);
-
-        // Add X-axis with numeric data (goals scored)
-        var xAxis = d3.axisBottom(xScale);
-        svg.append("g")
-           .attr("transform", "translate(0," + height + ")")
-           .call(xAxis);
-    });
-</script>
-
-</body>
-</html>
+    // Add X-axis with numeric data (goals scored)
+    var xAxis = d3.axisBottom(xScale);
+    svg.append("g")
+       .attr("transform", "translate(0," + height + ")")
+       .call(xAxis);
+});
