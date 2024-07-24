@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Euro 2024</title>
+    <title>Horizontal Bar Chart with CSV Data</title>
     <script src="https://d3js.org/d3.v6.min.js"></script>
     <style>
         #visualization {
             position: absolute;
-            left: 75%; /* Adjust left position to center horizontally or move to right */
+            left: 50%; /* Adjust left position to center horizontally or move to right */
             transform: translateX(-50%); /* Center the SVG container horizontally */
             background-color: #f0f0f0;
             padding: 20px;
@@ -21,73 +21,87 @@
 <div id="visualization"></div>
 
 <script>
-     var csvUrl = 'https://github.com/skillet64/498/blob/main/goals.csv';
+    // URL of the CSV file hosted on GitHub
+    var csvUrl = 'https://raw.githubusercontent.com/your-username/your-repo/main/data.csv';
 
     // Load data from CSV file
     d3.csv(csvUrl).then(function(data) {
         // Convert numeric data from string to number
         data.forEach(function(d) {
-            d.value = +d.value; // Assuming 'value' column contains numeric data
+            d.goals_scored = +d.goals_scored; // Convert goals_scored to number
         });
 
-    var margin = { top: 20, right: 20, bottom: 30, left: 40 };
-    var width = 600 - margin.left - margin.right; // Adjust width based on your layout
-    var height = 400 - margin.top - margin.bottom; // Adjust height based on your layout
+        var margin = { top: 20, right: 20, bottom: 30, left: 40 };
+        var width = 600 - margin.left - margin.right; // Adjust width based on your layout
+        var height = 400 - margin.top - margin.bottom; // Adjust height based on your layout
 
-    var xScale = d3.scaleLinear()
-                   .domain([0, d3.max(data)])  // Assuming data represents values on the x-axis
-                   .range([0, width]);
+        var xScale = d3.scaleLinear()
+                       .domain([0, d3.max(data, function(d) { return d.goals_scored; })])  // Dynamic domain based on data
+                       .range([0, width]);
 
-    var yScale = d3.scaleBand()
-                   .domain(d3.range(data.length))  // Assuming each data point corresponds to a category
-                   .range([0, height])
-                   .padding(0.1);
+        var yScale = d3.scaleBand()
+                       .domain(data.map(function(d) { return d.player; }))  // Use 'player' column for y-axis
+                       .range([0, height])
+                       .padding(0.1);
 
-    var svg = d3.select("#visualization")
-                .append("svg")
-                .attr("width", width + margin.left + margin.right)
-                .attr("height", height + margin.top + margin.bottom)
-                .append("g")
-                .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+        var svg = d3.select("#visualization")
+                    .append("svg")
+                    .attr("width", width + margin.left + margin.right)
+                    .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-    // Create rectangles for each data point (horizontal bars)
-    var bars = svg.selectAll("rect")
-                  .data(data)
-                  .enter()
-                  .append("rect")
-                  .attr("x", 0) // Start x from the left edge
-                  .attr("y", function(d, i) { return yScale(i); }) // Position vertically using yScale
-                  .attr("width", function(d) { return xScale(d); }) // Scale width based on data value
-                  .attr("height", yScale.bandwidth()) // Fixed height based on yScale bandwidth
-                  .attr("fill", "lightblue")
-                  .attr("stroke", "black");
+        // Create rectangles for each data point (horizontal bars)
+        var bars = svg.selectAll("rect")
+                      .data(data)
+                      .enter()
+                      .append("rect")
+                      .attr("x", 0) // Start x from the left edge
+                      .attr("y", function(d) { return yScale(d.player); }) // Position vertically using yScale
+                      .attr("width", function(d) { return xScale(d.goals_scored); }) // Scale width based on data value
+                      .attr("height", yScale.bandwidth()) // Fixed height based on yScale bandwidth
+                      .attr("fill", "lightblue")
+                      .attr("stroke", "black");
 
-    // Add tooltips or interaction (you can customize this based on your needs)
-    bars.on("mouseover", function(d) {
-            d3.select(this)
-              .attr("fill", "orange");
-        })
-        .on("mouseout", function(d) {
-            d3.select(this)
-              .attr("fill", "lightblue");
-        });
+        // Add tooltips or interaction (you can customize this based on your needs)
+        bars.on("mouseover", function(d) {
+                d3.select(this)
+                  .attr("fill", "orange");
+            })
+            .on("mouseout", function(d) {
+                d3.select(this)
+                  .attr("fill", "lightblue");
+            });
 
-    // X-axis label (if needed)
-    svg.append("text")
-       .attr("x", width / 2)
-       .attr("y", height + margin.bottom)
-       .attr("text-anchor", "middle")
-       .text("X Axis Label");
+        // X-axis label (if needed)
+        svg.append("text")
+           .attr("x", width / 2)
+           .attr("y", height + margin.bottom)
+           .attr("text-anchor", "middle")
+           .text("Goals Scored");
 
-    // Y-axis label (if needed)
-    svg.append("text")
-       .attr("transform", "rotate(-90)")
-       .attr("y", 0 - margin.left)
-       .attr("x", 0 - (height / 2))
-       .attr("dy", "1em")
-       .style("text-anchor", "middle")
-       .text("Y Axis Label");
+        // Y-axis label (if needed)
+        svg.append("text")
+           .attr("transform", "rotate(-90)")
+           .attr("y", 0 - margin.left)
+           .attr("x", 0 - (height / 2))
+           .attr("dy", "1em")
+           .style("text-anchor", "middle")
+           .text("Player");
+
+        // Add Y-axis with string data (player names)
+        var yAxis = d3.axisLeft(yScale);
+        svg.append("g")
+           .call(yAxis);
+
+        // Add X-axis with numeric data (goals scored)
+        var xAxis = d3.axisBottom(xScale);
+        svg.append("g")
+           .attr("transform", "translate(0," + height + ")")
+           .call(xAxis);
+    });
 </script>
 
 </body>
 </html>
+
