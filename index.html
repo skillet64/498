@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Horizontal Bar Chart with CSV Data</title>
+    <title>Euro 2024</title>
     <script src="https://d3js.org/d3.v6.min.js"></script>
     <style>
         body {
@@ -76,7 +76,7 @@
                       .attr("fill", "lightblue")
                       .attr("stroke", "black");
 
-        // Add tooltips or interaction (you can customize this based on your needs)
+        
         bars.on("mouseover", function(d) {
                 d3.select(this)
                   .attr("fill", "orange");
@@ -86,14 +86,14 @@
                   .attr("fill", "lightblue");
             });
 
-        // X-axis label (if needed)
+        // X-axis label 
         svg.append("text")
            .attr("x", width / 2)
            .attr("y", height + margin.bottom)
            .attr("text-anchor", "middle")
            .text("Goals Scored");
 
-        // Y-axis label (if needed)
+        // Y-axis label 
         svg.append("text")
            .attr("transform", "rotate(-90)")
            .attr("y", 0 - margin.left)
@@ -102,12 +102,12 @@
            .style("text-anchor", "middle")
            .text("Player");
 
-        // Add Y-axis with string data (player names)
+        // Add Y-axis with string data 
         var yAxis = d3.axisLeft(yScale);
         svg.append("g")
            .call(yAxis);
 
-        // Add X-axis with numeric data (goals scored)
+        // Add X-axis with numeric data 
         var xAxis = d3.axisBottom(xScale);
         svg.append("g")
            .attr("transform", "translate(0," + height + ")")
