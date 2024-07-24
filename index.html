@@ -3,20 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Euro 2024</title>
+    <title>Horizontal Bar Chart with CSV Data</title>
     <script src="https://d3js.org/d3.v6.min.js"></script>
     <style>
-        #visualization {
-            position: absolute;
-            left: 50%; /* Adjust left position to center horizontally or move to right */
-            transform: translateX(-50%); /* Center the SVG container horizontally */
+        body {
+            font-family: Arial, sans-serif;
             background-color: #f0f0f0;
             padding: 20px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        #visualization {
+            margin: 0 auto; /* Center the container horizontally */
+            max-width: 800px; /* Limit the width of the container */
+            background-color: #fff;
+            padding: 20px;
             border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
         }
     </style>
 </head>
 <body>
+
+<div class="header">
+    <h1>Goals Scored by Players</h1>
+</div>
 
 <div id="visualization"></div>
 
@@ -31,7 +44,7 @@
             d.goals_scored = +d.goals_scored; // Convert goals_scored to number
         });
 
-        var margin = { top: 20, right: 20, bottom: 30, left: 40 };
+        var margin = { top: 20, right: 20, bottom: 30, left: 80 }; // Adjusted left margin for SVG
         var width = 600 - margin.left - margin.right; // Adjust width based on your layout
         var height = 400 - margin.top - margin.bottom; // Adjust height based on your layout
 
@@ -104,5 +117,6 @@
 
 </body>
 </html>
+
 
 
