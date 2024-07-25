@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pie Chart with Labels Outside</title>
-    <!-- Include D3.js library -->
+    <title>Pie Chart</title>
     <script src="https://d3js.org/d3.v6.min.js"></script>
 </head>
 <body>
@@ -25,7 +24,7 @@
           .outerRadius(radius - 1);
 
         const pie = d3.pie()
-          .padAngle(1 / radius)
+          .padAngle(0.02) // Adjust padding between slices if needed
           .sort(null)
           .value(d => d.value);
 
@@ -36,10 +35,10 @@
         const svg = d3.select("body").append("svg")
           .attr("width", width)
           .attr("height", height)
-          .attr("viewBox", [-width / 2, -height / 2, width, height])
+          .attr("viewBox", `0 0 ${width} ${height}`) // Ensure viewBox matches width and height
           .attr("style", "max-width: 100%; height: auto;")
           .append("g")
-          .attr("transform", `translate(${width / 2},${height / 2})`);
+          .attr("transform", `translate(${width / 2},${height / 2})`); // Center the pie chart
 
         // Draw pie slices
         svg.selectAll("path")
@@ -83,7 +82,3 @@
     </script>
 </body>
 </html>
-
-function vecScale(v, scalar) {
-  return [v[0] * scalar, v[1] * scalar];
-}
