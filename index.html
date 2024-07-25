@@ -1,59 +1,71 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>D3.js Example: Content Hugging Container</title>
-    <style>
-        .container {
-            width: 300px;
-            height: 200px;
-            background-color: #f0f0f0;
-            padding: 20px;
-            border-radius: 5px;
-            overflow: hidden; /* Ensure content does not overflow */
-            position: relative; /* For positioning content absolutely */
-        }
+const width = 600;
+const height = 400;
+const data = [
+  { name: "A", value: 20 },
+  { name: "B", value: 30 },
+  { name: "C", value: 50 }
+];
 
-        .content {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            text-align: center; /* Center align text */
-            font-size: 14px; /* Example font size */
-        }
-    </style>
-</head>
-<body>
-    <div class="container" id="container">
-        <div class="content" id="content">
-            <p>This is some content that will dynamically hug the container.</p>
-        </div>
-    </div>
+const radius = Math.min(width, height) / 2;
+const innerRadius = radius * 0.67;
 
-    <!-- Include D3.js library -->
-    <script src="https://d3js.org/d3.v7.min.js"></script>
+const arc = d3.arc()
+  .innerRadius(innerRadius)
+  .outerRadius(radius - 1);
 
-    <!-- Your D3.js script -->
-    <script>
-        // Get container and content elements using D3.js
-        const container = d3.select('#container');
-        const content = d3.select('#content');
+const pie = d3.pie()
+  .padAngle(1 / radius)
+  .sort(null)
+  .value(d => d.value);
 
-        // Function to adjust content size based on container size
-        function adjustContentSize() {
-            const containerWidth = container.node().offsetWidth; // Get container width
-            const containerHeight = container.node().offsetHeight; // Get container height
+const color = d3.scaleOrdinal()
+  .domain(data.map(d => d.name))
+  .range(d3.quantize(t => d3.interpolateSpectral(t * 0.8 + 0.1), data.length).reverse());
 
-            // Adjust content font size based on container dimensions
-            const fontSize = Math.min(containerWidth / 15, containerHeight / 10); // Adjust multiplier for desired scaling
-            content.style('font-size', `${fontSize}px`);
-        }
+const svg = d3.select("body").append("svg")
+  .attr("width", width)
+  .attr("height", height)
+  .attr("viewBox", [-width / 2, -height / 2, width, height])
+  .attr("style", "max-width: 100%; height: auto;")
+  .append("g")
+  .attr("transform", `translate(${width / 2},${height / 2})`);
 
-        // Call adjustContentSize initially and on window resize
-        adjustContentSize();
-        window.addEventListener('resize', adjustContentSize);
-    </script>
-</body>
-</html>
+// Draw pie slices
+svg.selectAll("path")
+  .data(pie(data))
+  .enter().append("path")
+  .attr("fill", d => color(d.data.name))
+  .attr("d", arc)
+  .append("title")
+  .text(d => `${d.data.name}: ${d.data.value.toLocaleString()}`);
+
+// Draw text labels outside the pie chart
+const labels = svg.selectAll("text")
+  .data(pie(data))
+  .enter().append("text")
+  .attr("dy", "0.35em")
+  .attr("transform", d => {
+    const pos = arc.centroid(d);
+    const posNorm = normalize(pos);
+    const posOut = vecScale(vecAdd(posNorm, radius * 0.5), 1.1); // Adjust positioning here
+    return `translate(${posOut})`;
+  })
+  .attr("text-anchor", d => {
+    // Determine text-anchor based on the centroid position
+    return (arc.centroid(d)[0] > 0) ? "start" : "end";
+  })
+  .text(d => `${d.data.name}: ${d.data.value.toLocaleString()}`);
+
+// Helper functions for vector operations
+function normalize(v) {
+  const mag = Math.sqrt(v[0] * v[0] + v[1] * v[1]);
+  return [v[0] / mag, v[1] / mag];
+}
+
+function vecAdd(v1, v2) {
+  return [v1[0] + v2, v1[1] + v2];
+}
+
+function vecScale(v, scalar) {
+  return [v[0] * scalar, v[1] * scalar];
+}
