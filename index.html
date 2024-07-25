@@ -10,11 +10,17 @@
     <script>
         const width = 600;
         const height = 400;
-        const data = [
-          { name: "A", value: 20 },
-          { name: "B", value: 30 },
-          { name: "C", value: 50 }
-        ];
+        const csvUrl = "https://raw.githubusercontent.com/username/repository/main/data.csv";
+
+        // Use D3.js to read the CSV file
+        d3.csv(csvUrl).then(function(data) {
+            // Log the data to the console for verification
+            console.log(data);
+
+            // Convert 'goals' to numeric
+            data.forEach(d => {
+                d.goals = +d.goals; // Convert goals to numeric
+            });
 
         const radius = Math.min(width, height) / 2;
         const innerRadius = radius * 0.67;
