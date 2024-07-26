@@ -18,7 +18,7 @@ var projection = d3.geo.mercator()
 .translate([width / 2, height / 2])
 var path = d3.geo.path()
 .projection(projection);
-var url = https://skillet64.github.io/498/world.geojson
+var url = 'https://skillet64.github.io/498/world.geojson'
 
 d3.json(url, function(err, geojson) {
 svg.append("path")
