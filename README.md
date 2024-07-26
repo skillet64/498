@@ -1,1 +1,2 @@
-d3 data visualiztion for Euro 2024
+meteorite landings around the world
+
