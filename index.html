@@ -80,7 +80,14 @@
 
     // Function to render the map and pins
     function render() {
+        if (!landData || !pinsData) {
+            console.error('Data not available for rendering');
+            return;
+        }
+
         context.clearRect(0, 0, width, height);
+
+        // Render land
         context.beginPath();
         path(sphere);
         context.fillStyle = "#fff";
@@ -114,17 +121,17 @@
     async function loadData() {
         try {
             const land50Response = await fetch('https://skillet64.github.io/498/land-50m.json');
+            if (!land50Response.ok) throw new Error('Failed to fetch land-50m.json');
             const land50Data = await land50Response.json();
             landData = topojson.feature(land50Data, land50Data.objects.land);
 
             const land110Response = await fetch('https://skillet64.github.io/498/land-110m.json');
+            if (!land110Response.ok) throw new Error('Failed to fetch land-110m.json');
             const land110Data = await land110Response.json();
             // Optionally use land110Data here if needed for fallback or different rendering
 
-            render();
-
-            // Load and plot pins
             const pinsResponse = await fetch('https://skillet64.github.io/498/ml-Meteorite_Landings.csv');
+            if (!pinsResponse.ok) throw new Error('Failed to fetch ml-Meteorite_Landings.csv');
             const pinsText = await pinsResponse.text();
             pinsData = d3.csvParse(pinsText);
 
@@ -204,3 +211,4 @@
 </script>
 </body>
 </html>
+
