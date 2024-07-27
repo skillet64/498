@@ -63,7 +63,12 @@
 
     // Define the sphere and land data
     const sphere = { type: "Sphere" };
-    let land50, land110;
+    let landData, land110;
+
+    // Create an error div
+    const errorDiv = d3.select("body").append("div")
+        .attr("class", "error")
+        .style("display", "none");
 
     // Function to handle errors
     function handleError(error, fileName) {
@@ -92,12 +97,12 @@
 
     // Load and render data
     Promise.all([
-        fetch('https://example.com/path/to/land-50m.json').then(response => response.json()).then(data => topojson.feature(data, data.objects.land)).catch(error => handleError(error, 'land-50m.json')),
-        fetch('https://example.com/path/to/land-110m.json').then(response => response.json()).then(data => topojson.feature(data, data.objects.land)).catch(error => handleError(error, 'land-110m.json'))
+        fetch('https://skillet64.github.io/498/land-50m.json').then(response => response.json()).then(data => topojson.feature(data, data.objects.land)).catch(error => handleError(error, 'land-50m.json')),
+        fetch('https://skillet64.github.io/498/land-110m.json').then(response => response.json()).then(data => topojson.feature(data, data.objects.land)).catch(error => handleError(error, 'land-110m.json'))
     ]).then(([land50Data, land110Data]) => {
-        land50 = land50Data;
+        landData = land50Data;
         land110 = land110Data;
-        render(land50);
+        render(landData);
 
         // Load and plot pins
         fetch('https://skillet64.github.io/498/ml-Meteorite_Landings.csv')
@@ -116,6 +121,9 @@
                 });
 
                 // Add tooltip functionality
+                const tooltip = d3.select("body").append("div")
+                    .attr("class", "tooltip");
+
                 canvas.addEventListener("mousemove", (event) => {
                     const [x, y] = d3.pointer(event);
                     const [longitude, latitude] = projection.invert([x, y]);
@@ -168,7 +176,7 @@
             const delta = versor.delta(v0, v1);
             const q1 = versor.multiply(q0, delta);
             projection.rotate(versor.rotation(q1));
-            render(land50);
+            render(landData);
         }
     }).catch(error => handleError(error, 'GeoJSON files'));
 
@@ -178,7 +186,7 @@
         canvas.height = window.innerHeight;
         projection.translate([canvas.width / 2, canvas.height / 2])
             .scale(Math.min(canvas.width, canvas.height) / 2);
-        render(land50);
+        render(landData);
     });
 </script>
 </body>
