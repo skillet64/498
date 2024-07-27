@@ -63,7 +63,7 @@
     });
 
     // Load the CSV data
-    var csvUrl = 'https://skillet64.github.io/498/ml-Meteorite_Landings.csv'; 
+    var csvUrl = 'https://skillet64.github.io/498/ml-Meteorite_Landings.csv'; // Replace with the URL to your CSV file
 
     // Create a tooltip div
     var tooltip = d3.select("body").append("div")
@@ -72,8 +72,9 @@
     d3.csv(csvUrl, function(error, data) {
         if (error) throw error;
 
-        // Log the raw CSV data to inspect its structure
+        // Log the raw CSV data and a sample
         console.log("Raw CSV data:", data);
+        console.log("First data item:", data[0]);
 
         // Check if fields are properly parsed
         if (data.length > 0) {
