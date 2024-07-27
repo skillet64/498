@@ -40,7 +40,7 @@
 
     // Set up the projection and path generator
     var projection = d3.geo.mercator()
-        .scale(width / 2 / Math.PI)
+        .scale(150)  // Adjust scale as needed
         .translate([width / 2, height / 2]);
 
     var path = d3.geo.path()
@@ -86,13 +86,16 @@
             .data(data)
             .enter().append("circle")
             .attr("cx", function(d) {
+                // Log the latitude and longitude for debugging
+                console.log("Reclong:", d.reclong, "Reclat:", d.reclat);
+                
+                // Convert coordinates and log the result
                 var coords = projection([+d.reclong, +d.reclat]);
-                console.log("Coords for pin (cx):", coords[0], "Reclong:", d.reclong, "Reclat:", d.reclat); // Log cx coordinates
+                console.log("Coords for pin (cx, cy):", coords[0], coords[1]);
                 return coords[0];
             })
             .attr("cy", function(d) {
                 var coords = projection([+d.reclong, +d.reclat]);
-                console.log("Coords for pin (cy):", coords[1], "Reclong:", d.reclong, "Reclat:", d.reclat); // Log cy coordinates
                 return coords[1];
             })
             .attr("r", 3)
@@ -100,8 +103,6 @@
             .attr("stroke", "black")
             .attr("stroke-width", 1)
             .on("mouseover", function(event, d) {
-                console.log("Mouseover data:", d);
-                console.log("Available fields:", Object.keys(d));
                 tooltip.transition()
                     .duration(200)
                     .style("opacity", .9);
@@ -124,7 +125,7 @@
            .attr("height", height);
 
         projection
-            .scale(width / 2 / Math.PI)
+            .scale(150)  // Adjust scale if needed
             .translate([width / 2, height / 2]);
 
         svg.selectAll("path")
@@ -143,5 +144,3 @@
 </script>
 </body>
 </html>
-
-
