@@ -56,6 +56,8 @@
         let landData, countryBorders, pinsData;
 
         function render() {
+            console.log('Rendering the map');
+
             context.clearRect(0, 0, width, height);
 
             // Draw the map sphere
@@ -81,34 +83,40 @@
             pinsData.forEach(d => {
                 const [x, y] = projection([+d.reclong, +d.reclat]);
                 if (x !== undefined && y !== undefined && isPinVisible([+d.reclong, +d.reclat])) {
+                    console.log(`Drawing pin at (${x}, ${y})`);
                     context.beginPath();
                     context.arc(x, y, 3, 0, 2 * Math.PI);
                     context.fillStyle = "red";
                     context.fill();
                     context.strokeStyle = "black";
                     context.stroke();
+                } else {
+                    console.log(`Pin at (${+d.reclong}, ${+d.reclat}) is not visible.`);
                 }
             });
         }
 
         function isPinVisible([long, lat]) {
-            // Convert geographic coordinates to Cartesian coordinates
+            // Check if pin is within the visible hemisphere
             const [x, y] = projection([long, lat]);
-            // Check if the point is within the visible hemisphere
-            const [centerX, centerY] = [width / 2, height / 2];
-            const distanceFromCenter = Math.sqrt(Math.pow(x - centerX, 2) + Math.pow(y - centerY, 2));
+            const [cx, cy] = [width / 2, height / 2];
+            const distanceFromCenter = Math.sqrt(Math.pow(x - cx, 2) + Math.pow(y - cy, 2));
+            console.log(`Pin at (${long}, ${lat}) - distance from center: ${distanceFromCenter}`);
             return distanceFromCenter <= projection.scale();
         }
 
         function loadData() {
+            console.log('Loading data...');
             Promise.all([
                 d3.json('https://skillet64.github.io/498/land-50m.json'),
                 d3.json('https://skillet64.github.io/498/land-110m.json'),
                 d3.csv('https://skillet64.github.io/498/ml-Meteorite_Landings.csv')
             ]).then(([land50, land110, csvData]) => {
+                console.log('Data loaded successfully');
                 landData = topojson.feature(land50, land50.objects.land);
                 countryBorders = topojson.feature(land110, land110.objects.land);
                 pinsData = csvData;
+                console.log(`Loaded ${pinsData.length} pins`);
                 render();
             }).catch(error => {
                 console.error('Error loading data:', error);
@@ -120,6 +128,7 @@
             longitude = (longitude + longitudeDelta) % 360;
             latitude = Math.max(-90, Math.min(90, latitude + latitudeDelta)); // Constrain latitude between -90 and 90
             projection.rotate([longitude, latitude]);
+            console.log(`Rotating map to longitude: ${longitude}, latitude: ${latitude}`);
             render();
         }
 
@@ -176,6 +185,7 @@
             function dragstarted({x, y}) {
                 v0 = versor.cartesian(projection.invert([x, y]));
                 q0 = versor(r0 = projection.rotate());
+                console.log('Drag started');
             }
 
             function dragged(event) {
@@ -194,6 +204,7 @@
                 projection.rotate(versor.rotation(q1));
 
                 if (delta[0] < 0.7) dragstarted.apply(this, [event, this]);
+                console.log('Dragging - new projection rotation:', projection.rotate());
                 render();
             }
 
@@ -206,5 +217,6 @@
     </script>
 </body>
 </html>
+
 
 
