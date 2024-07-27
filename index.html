@@ -43,6 +43,7 @@
     <script>
         const width = window.innerWidth;
         const height = window.innerHeight;
+        const radius = Math.min(width, height) / 2;
 
         // Create and append canvas
         const canvas = d3.create("canvas").attr("width", width).attr("height", height);
@@ -50,7 +51,7 @@
         document.body.appendChild(canvas.node());
 
         // Set up projection and path
-        const projection = d3.geoOrthographic().translate([width / 2, height / 2]).scale(height / 2.5);
+        const projection = d3.geoOrthographic().translate([width / 2, height / 2]).scale(radius);
         const path = d3.geoPath().projection(projection).context(context);
 
         let landData, countryBorders, pinsData;
@@ -79,30 +80,43 @@
             context.lineWidth = 1;
             context.stroke();
 
-            // Draw the pins
-            pinsData.forEach(d => {
-                const [x, y] = projection([+d.reclong, +d.reclat]);
-                if (x !== undefined && y !== undefined && isPinVisible([+d.reclong, +d.reclat])) {
-                    console.log(`Drawing pin at (${x}, ${y})`);
-                    context.beginPath();
-                    context.arc(x, y, 3, 0, 2 * Math.PI);
-                    context.fillStyle = "red";
-                    context.fill();
-                    context.strokeStyle = "black";
-                    context.stroke();
-                } else {
-                    console.log(`Pin at (${+d.reclong}, ${+d.reclat}) is not visible.`);
-                }
-            });
+            // Draw heat map
+            drawHeatMap();
         }
 
-        function isPinVisible([long, lat]) {
-            // Check if pin is within the visible hemisphere
-            const [x, y] = projection([long, lat]);
-            const [cx, cy] = [width / 2, height / 2];
-            const distanceFromCenter = Math.sqrt(Math.pow(x - cx, 2) + Math.pow(y - cy, 2));
-            console.log(`Pin at (${long}, ${lat}) - distance from center: ${distanceFromCenter}`);
-            return distanceFromCenter <= projection.scale();
+        function drawHeatMap() {
+            console.log('Drawing heat map');
+
+            // Create an off-screen canvas to compute the heat map
+            const heatCanvas = document.createElement("canvas");
+            heatCanvas.width = width;
+            heatCanvas.height = height;
+            const heatContext = heatCanvas.getContext("2d");
+
+            // Define a color scale
+            const colorScale = d3.scaleSequential(d3.interpolateWarm)
+                .domain([0, 100]); // Adjust the domain as needed for your data
+
+            // Create a kernel density function
+            const kdf = d3.kernelDensityEstimator(d3.kernelEpanechnikov(20), projection([0, 0]));
+
+            // Calculate density
+            const density = kdf(pinsData.map(d => projection([+d.reclong, +d.reclat])));
+
+            // Draw the heat map on the off-screen canvas
+            density.forEach(([x, y, value]) => {
+                if (x !== undefined && y !== undefined) {
+                    heatContext.beginPath();
+                    heatContext.arc(x, y, 10, 0, 2 * Math.PI);
+                    heatContext.fillStyle = colorScale(value);
+                    heatContext.fill();
+                }
+            });
+
+            // Draw the heat map on the main canvas
+            context.globalAlpha = 0.6; // Set the transparency for the heat map
+            context.drawImage(heatCanvas, 0, 0);
+            context.globalAlpha = 1; // Reset transparency
         }
 
         function loadData() {
@@ -217,7 +231,3 @@
     </script>
 </body>
 </html>
-
-
-
-
