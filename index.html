@@ -63,7 +63,7 @@
     });
 
     // Load the CSV data
-    var csvUrl = 'https://skillet64.github.io/498/ml-Meteorite_Landings.csv'; // Replace with the URL to your CSV file
+    var csvUrl = 'https://skillet64.github.io/498/ml-Meteorite_Landings.csv'; 
 
     // Create a tooltip div
     var tooltip = d3.select("body").append("div")
@@ -72,18 +72,26 @@
     d3.csv(csvUrl, function(error, data) {
         if (error) throw error;
 
-        console.log("Full data:", data);
-        console.log("First object:", data[0]);
+        // Log the raw CSV data to inspect its structure
+        console.log("Raw CSV data:", data);
+
+        // Check if fields are properly parsed
+        if (data.length > 0) {
+            console.log("Field names in first row:", Object.keys(data[0]));
+        }
 
         // Process and add pins
         svg.selectAll("circle")
             .data(data)
             .enter().append("circle")
             .attr("cx", function(d) {
-                return projection([+d.reclong, +d.reclat])[0]; // X coordinate
+                // Ensure correct coordinate order: [longitude, latitude]
+                var coords = projection([+d.reclong, +d.reclat]);
+                return coords[0];
             })
             .attr("cy", function(d) {
-                return projection([+d.reclong, +d.reclat])[1]; // Y coordinate
+                var coords = projection([+d.reclong, +d.reclat]);
+                return coords[1];
             })
             .attr("r", 3)
             .attr("fill", "red")
@@ -95,7 +103,7 @@
                 tooltip.transition()
                     .duration(200)
                     .style("opacity", .9);
-                tooltip.html(d.name || "No name") // Access 'name' field
+                tooltip.html(d.name || "No name") // Adjust to the correct field if needed
                     .style("left", (event.pageX + 5) + "px")
                     .style("top", (event.pageY - 28) + "px");
             })
@@ -122,10 +130,12 @@
 
         svg.selectAll("circle")
             .attr("cx", function(d) {
-                return projection([+d.reclong, +d.reclat])[0];
+                var coords = projection([+d.reclong, +d.reclat]);
+                return coords[0];
             })
             .attr("cy", function(d) {
-                return projection([+d.reclong, +d.reclat])[1];
+                var coords = projection([+d.reclong, +d.reclat]);
+                return coords[1];
             });
     };
 </script>
