@@ -73,12 +73,13 @@
         if (error) throw error;
 
         console.log(data); // Debugging line to check CSV content
-
+        console.log(data[0]);
         // Process and add pins
         svg.selectAll("circle")
             .data(data)
             .enter().append("circle")
             .attr("cx", function(d) {
+                console.log("Longitude:", d.reclong, "Latitude:", d.reclat);
                 return projection([+d.reclong, +d.reclat])[0];
             })
             .attr("cy", function(d) {
@@ -89,6 +90,7 @@
             .attr("stroke", "black")
             .attr("stroke-width", 1)
             .on("mouseover", function(event, d) {
+                console.log("Mouseover data:", d);
                 tooltip.transition()
                     .duration(200)
                     .style("opacity", .9);
