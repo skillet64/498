@@ -64,7 +64,7 @@
 
     // Define the sphere and land data
     const sphere = { type: "Sphere" };
-    let landData, land110;
+    let landData, pinsData;
 
     // Create an error div
     const errorDiv = d3.select("body").append("div")
@@ -78,8 +78,8 @@
             .text(`Failed to load ${fileName}. Check the console for details.`);
     }
 
-    // Function to render the map
-    function render(land) {
+    // Function to render the map and pins
+    function render() {
         context.clearRect(0, 0, width, height);
         context.beginPath();
         path(sphere);
@@ -87,13 +87,24 @@
         context.fill();
 
         context.beginPath();
-        path(land);
+        path(landData);
         context.fillStyle = "#000";
         context.fill();
 
         context.beginPath();
         path(sphere);
         context.stroke();
+
+        // Draw pins
+        pinsData.forEach(d => {
+            const [x, y] = projection([+d.reclong, +d.reclat]);
+            context.beginPath();
+            context.arc(x, y, 3, 0, 2 * Math.PI);
+            context.fillStyle = "red";
+            context.fill();
+            context.strokeStyle = "black";
+            context.stroke();
+        });
     }
 
     // Variables for drag
@@ -106,23 +117,14 @@
     ]).then(([land50Data, land110Data]) => {
         landData = land50Data;
         land110 = land110Data;
-        render(landData);
+        render();
 
         // Load and plot pins
         fetch('https://skillet64.github.io/498/ml-Meteorite_Landings.csv')
             .then(response => response.text())
             .then(text => d3.csvParse(text))
             .then(data => {
-                // Add pins
-                data.forEach(d => {
-                    const [x, y] = projection([+d.reclong, +d.reclat]);
-                    context.beginPath();
-                    context.arc(x, y, 3, 0, 2 * Math.PI);
-                    context.fillStyle = "red";
-                    context.fill();
-                    context.strokeStyle = "black";
-                    context.stroke();
-                });
+                pinsData = data;
 
                 // Add tooltip functionality
                 const tooltip = d3.select("body").append("div")
@@ -131,7 +133,7 @@
                 canvas.addEventListener("mousemove", (event) => {
                     const [x, y] = d3.pointer(event);
                     const [longitude, latitude] = projection.invert([x, y]);
-                    const closest = data.reduce((closest, d) => {
+                    const closest = pinsData.reduce((closest, d) => {
                         const [px, py] = projection([+d.reclong, +d.reclat]);
                         const distance = Math.sqrt(Math.pow(px - x, 2) + Math.pow(py - y, 2));
                         return distance < closest.distance ? { distance, data: d } : closest;
@@ -156,6 +158,8 @@
                         .duration(500)
                         .style("opacity", 0);
                 });
+
+                render(); // Ensure pins are drawn after data is loaded
             })
             .catch(error => handleError(error, 'CSV file'));
 
@@ -180,7 +184,7 @@
             const delta = versor.delta(v0, v1);
             const q1 = versor.multiply(q0, delta);
             projection.rotate(versor.rotation(q1));
-            render(landData);
+            render(); // Re-render map and pins
         }
     }).catch(error => handleError(error, 'GeoJSON files'));
 
@@ -190,7 +194,7 @@
         canvas.height = window.innerHeight;
         projection.translate([canvas.width / 2, canvas.height / 2])
             .scale(Math.min(canvas.width, canvas.height) / 2);
-        render(landData);
+        render();
     });
 </script>
 </body>
