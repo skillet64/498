@@ -32,10 +32,11 @@
         const path = d3.geoPath().projection(projection).context(context);
 
         let v0, q0, r0, a0, l;
+        let landData, countryBorders, pinsData;
 
-        function render(land, borders) {
+        function render() {
             context.clearRect(0, 0, width, height);
-            
+
             // Draw the map sphere
             context.beginPath();
             path({type: "Sphere"});
@@ -44,13 +45,13 @@
 
             // Draw the land
             context.beginPath();
-            path(land);
+            path(landData);
             context.fillStyle = "#bada55";
             context.fill();
 
             // Draw country borders
             context.beginPath();
-            path(borders);
+            path(countryBorders);
             context.strokeStyle = "#333";
             context.lineWidth = 1;
             context.stroke();
@@ -92,7 +93,7 @@
             }
 
             projection.rotate(versor.rotation(q1));
-            render(landData, countryBorders); // Re-render map and pins
+            render();
         }
 
         function pointer(event, that) {
@@ -112,16 +113,15 @@
         }
 
         function loadData() {
-            // Load GeoJSON data
-            d3.json('https://skillet64.github.io/498/land-50m.json').then(data => {
-                landData = data;
-                return d3.json('https://skillet64.github.io/498/land-110m.json');
-            }).then(data => {
-                countryBorders = data;
-                return d3.csv('https://skillet64.github.io/498/ml-Meteorite_Landings.csv');
-            }).then(data => {
-                pinsData = data;
-                render(landData, countryBorders);
+            Promise.all([
+                d3.json('https://skillet64.github.io/498/land-50m.json'),
+                d3.json('https://skillet64.github.io/498/land-110m.json'),
+                d3.csv('https://skillet64.github.io/498/ml-Meteorite_Landings.csv')
+            ]).then(([land50, land110, csvData]) => {
+                landData = d3.geoPath().projection(projection).context(context).parse(land50);
+                countryBorders = d3.geoPath().projection(projection).context(context).parse(land110);
+                pinsData = csvData;
+                render();
             }).catch(error => {
                 console.error('Error loading data:', error);
             });
