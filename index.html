@@ -18,10 +18,28 @@
             border-radius: 3px; 
             pointer-events: none; 
         }
+        .controls {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 10;
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .controls button {
+            margin: 5px;
+        }
     </style>
 </head>
 <body>
     <div class="tooltip" style="display: none;"></div>
+    <div class="controls">
+        <button onclick="rotateMap(-10, 0)">Rotate Left</button>
+        <button onclick="rotateMap(10, 0)">Rotate Right</button>
+        <button onclick="rotateMap(0, 10)">Rotate Down</button>
+        <button onclick="rotateMap(0, -10)">Rotate Up</button>
+    </div>
     <script>
         const width = window.innerWidth;
         const height = window.innerHeight;
@@ -35,7 +53,6 @@
         const projection = d3.geoOrthographic().translate([width / 2, height / 2]).scale(height / 2.5);
         const path = d3.geoPath().projection(projection).context(context);
 
-        let v0, q0, r0, a0, l;
         let landData, countryBorders, pinsData;
 
         function render() {
@@ -74,48 +91,6 @@
             });
         }
 
-        function dragstarted(event) {
-            const [x, y] = d3.pointer(event);
-            const [longitude, latitude] = projection.invert([x, y]);
-            v0 = versor.cartesian([longitude * Math.PI / 180, latitude * Math.PI / 180]);
-            q0 = versor.rotation(projection.rotate());
-        }
-
-        function dragged(event) {
-            const [x, y] = d3.pointer(event);
-            const [longitude, latitude] = projection.invert([x, y]);
-            const v1 = versor.cartesian([longitude * Math.PI / 180, latitude * Math.PI / 180]);
-            const delta = versor.delta(v0, v1);
-            let q1 = versor.multiply(q0, delta);
-
-            const p = pointer(event, this);
-            if (p[2]) {
-                const d = (p[2] - a0) / 2;
-                const s = -Math.sin(d);
-                const c = Math.sign(Math.cos(d));
-                q1 = versor.multiply([Math.sqrt(1 - s * s), 0, 0, c * s], q1);
-            }
-
-            projection.rotate(versor.rotation(q1));
-            render();
-        }
-
-        function pointer(event, that) {
-            const t = d3.pointers(event, that);
-            if (t.length !== l) {
-                l = t.length;
-                if (l > 1) a0 = Math.atan2(t[1][1] - t[0][1], t[1][0] - t[0][0]);
-                dragstarted.apply(that, [event, that]);
-            }
-            if (l > 1) {
-                const x = d3.mean(t, p => p[0]);
-                const y = d3.mean(t, p => p[1]);
-                const a = Math.atan2(t[1][1] - t[0][1], t[1][0] - t[0][0]);
-                return [x, y, a];
-            }
-            return t[0];
-        }
-
         function loadData() {
             Promise.all([
                 d3.json('https://skillet64.github.io/498/land-50m.json'),
@@ -131,12 +106,15 @@
             });
         }
 
-        loadData();
+        function rotateMap(longitudeDelta, latitudeDelta) {
+            let [longitude, latitude] = projection.rotate();
+            longitude = (longitude + longitudeDelta) % 360;
+            latitude = Math.max(-90, Math.min(90, latitude + latitudeDelta)); // Constrain latitude between -90 and 90
+            projection.rotate([longitude, latitude]);
+            render();
+        }
 
-        d3.select(canvas.node())
-            .call(d3.drag()
-                .on("start", dragstarted)
-                .on("drag", dragged));
+        loadData();
 
         // Tooltip handling
         const tooltip = d3.select(".tooltip");
