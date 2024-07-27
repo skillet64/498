@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.10.1/d3.min.js"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/versor@0.2/dist/versor.min.js"></script>
     <style>
         body {
@@ -42,9 +42,6 @@
 </head>
 <body>
 <script type="module">
-    import { FileAttachment } from "https://d3js.org/d3-fetch.v2.min.js";
-    import * as topojson from "https://d3js.org/topojson.v3.min.js";
-
     // Set up dimensions
     const width = window.innerWidth;
     const height = window.innerHeight;
@@ -66,24 +63,7 @@
 
     // Define the sphere and land data
     const sphere = { type: "Sphere" };
-    const land50 = FileAttachment("land-50m.json").json()
-        .then(world => topojson.feature(world, world.objects.land))
-        .catch(error => handleError(error, 'land-50m.json'));
-
-    const land110 = FileAttachment("land-110m.json").json()
-        .then(world => topojson.feature(world, world.objects.land))
-        .catch(error => handleError(error, 'land-110m.json'));
-
-    const csvUrl = 'https://skillet64.github.io/498/ml-Meteorite_Landings.csv';
-
-    // Create a tooltip div
-    const tooltip = d3.select("body").append("div")
-        .attr("class", "tooltip");
-
-    // Create an error message div
-    const errorDiv = d3.select("body").append("div")
-        .attr("class", "error")
-        .style("display", "none");
+    let land50, land110;
 
     // Function to handle errors
     function handleError(error, fileName) {
@@ -111,11 +91,18 @@
     }
 
     // Load and render data
-    Promise.all([land50, land110]).then(([land50, land110]) => {
+    Promise.all([
+        fetch('https://example.com/path/to/land-50m.json').then(response => response.json()).then(data => topojson.feature(data, data.objects.land)).catch(error => handleError(error, 'land-50m.json')),
+        fetch('https://example.com/path/to/land-110m.json').then(response => response.json()).then(data => topojson.feature(data, data.objects.land)).catch(error => handleError(error, 'land-110m.json'))
+    ]).then(([land50Data, land110Data]) => {
+        land50 = land50Data;
+        land110 = land110Data;
         render(land50);
 
         // Load and plot pins
-        d3.csv(csvUrl)
+        fetch('https://skillet64.github.io/498/ml-Meteorite_Landings.csv')
+            .then(response => response.text())
+            .then(text => d3.csvParse(text))
             .then(data => {
                 // Add pins
                 data.forEach(d => {
@@ -158,7 +145,7 @@
                         .style("opacity", 0);
                 });
             })
-            .catch(error => handleError(error, csvUrl));
+            .catch(error => handleError(error, 'CSV file'));
 
         // Set up drag behavior
         const drag = d3.drag()
