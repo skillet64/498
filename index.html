@@ -4,8 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Interactive Spherical Map</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.10.1/d3.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/versor/0.2.1/versor.min.js"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/versor@0.2/dist/versor.min.js"></script>
+    <script src="https://d3js.org/topojson.v3.min.js"></script>
     <style>
         body { margin: 0; }
         canvas { display: block; }
@@ -24,10 +25,13 @@
     <script>
         const width = window.innerWidth;
         const height = window.innerHeight;
+
+        // Create and append canvas
         const canvas = d3.create("canvas").attr("width", width).attr("height", height);
         const context = canvas.node().getContext("2d");
         document.body.appendChild(canvas.node());
 
+        // Set up projection and path
         const projection = d3.geoOrthographic().translate([width / 2, height / 2]).scale(height / 2.5);
         const path = d3.geoPath().projection(projection).context(context);
 
@@ -118,8 +122,8 @@
                 d3.json('https://skillet64.github.io/498/land-110m.json'),
                 d3.csv('https://skillet64.github.io/498/ml-Meteorite_Landings.csv')
             ]).then(([land50, land110, csvData]) => {
-                landData = d3.geoPath().projection(projection).context(context).parse(land50);
-                countryBorders = d3.geoPath().projection(projection).context(context).parse(land110);
+                landData = topojson.feature(land50, land50.objects.land);
+                countryBorders = topojson.feature(land110, land110.objects.land);
                 pinsData = csvData;
                 render();
             }).catch(error => {
@@ -139,6 +143,7 @@
         canvas.node().addEventListener("mousemove", (event) => {
             const [x, y] = d3.pointer(event, canvas.node());
             const [longitude, latitude] = projection.invert([x, y]);
+            let found = false;
             pinsData.forEach(d => {
                 const [px, py] = projection([+d.reclong, +d.reclat]);
                 if (Math.hypot(px - x, py - y) < 5) {
@@ -146,14 +151,17 @@
                         .style("left", `${event.pageX + 5}px`)
                         .style("top", `${event.pageY - 28}px`)
                         .text(d.name);
+                    found = true;
                 }
             });
+            if (!found) {
+                tooltip.style("display", "none");
+            }
         });
 
         canvas.node().addEventListener("mouseleave", () => {
             tooltip.style("display", "none");
         });
-
     </script>
 </body>
 </html>
