@@ -23,6 +23,7 @@
             border: 0;
             border-radius: 8px;
             pointer-events: none;
+            opacity: 0;
         }
     </style>
 </head>
@@ -66,11 +67,12 @@
 
     // Create a tooltip div
     var tooltip = d3.select("body").append("div")
-        .attr("class", "tooltip")
-        .style("opacity", 0);
+        .attr("class", "tooltip");
 
     d3.csv(csvUrl, function(error, data) {
         if (error) throw error;
+
+        console.log(data); // Debugging line to check CSV content
 
         // Process and add pins
         svg.selectAll("circle")
@@ -126,9 +128,3 @@
 </script>
 </body>
 </html>
-
-
-
-
-
-
