@@ -8,7 +8,7 @@
         body {
             margin: 0;
             padding: 0;
-            overflow: hidden; /* Hide scrollbars */
+            overflow: hidden;
         }
         svg {
             width: 100vw;
@@ -57,13 +57,13 @@
             .data(geojson.features)
             .enter().append("path")
             .attr("d", path)
-            .attr("fill", "none") // No fill
-            .attr("stroke", "#000") // Border color
-            .attr("stroke-width", 1); // Border width
+            .attr("fill", "none")
+            .attr("stroke", "#000")
+            .attr("stroke-width", 1);
     });
 
     // Load the CSV data
-    var csvUrl = 'https://skillet64.github.io/498/ml-Meteorite_Landings.csv'; // Replace with the URL to your CSV file
+    var csvUrl = 'https://example.com/data.csv'; // Replace with the URL to your CSV file
 
     // Create a tooltip div
     var tooltip = d3.select("body").append("div")
@@ -72,15 +72,14 @@
     d3.csv(csvUrl, function(error, data) {
         if (error) throw error;
 
-        console.log(data); // Log entire data array
-        console.log(data[0]); // Log the first object to check its structure
+        console.log("Full data:", data);
+        console.log("First object:", data[0]);
 
         // Process and add pins
         svg.selectAll("circle")
             .data(data)
             .enter().append("circle")
             .attr("cx", function(d) {
-                // Assuming d.reclat is latitude and d.reclong is longitude
                 return projection([+d.reclong, +d.reclat])[0]; // X coordinate
             })
             .attr("cy", function(d) {
@@ -91,11 +90,12 @@
             .attr("stroke", "black")
             .attr("stroke-width", 1)
             .on("mouseover", function(event, d) {
-                console.log("Mouseover data:", d); // Log data on mouseover
+                console.log("Mouseover data:", d);
+                console.log("Available fields:", Object.keys(d));
                 tooltip.transition()
                     .duration(200)
                     .style("opacity", .9);
-                tooltip.html(d.name || "No name") // Display name from CSV, fallback to "No name"
+                tooltip.html(d.name || "No name") // Access 'name' field
                     .style("left", (event.pageX + 5) + "px")
                     .style("top", (event.pageY - 28) + "px");
             })
