@@ -80,7 +80,7 @@
             // Draw the pins
             pinsData.forEach(d => {
                 const [x, y] = projection([+d.reclong, +d.reclat]);
-                if (x && y) { // Ensure coordinates are valid
+                if (x && y && isPinVisible([+d.reclong, +d.reclat])) { // Ensure coordinates are valid and pin is visible
                     context.beginPath();
                     context.arc(x, y, 3, 0, 2 * Math.PI);
                     context.fillStyle = "red";
@@ -89,6 +89,13 @@
                     context.stroke();
                 }
             });
+        }
+
+        function isPinVisible([long, lat]) {
+            // Convert geographic coordinates to Cartesian coordinates
+            const [x, y] = projection([long, lat]);
+            // Check if the point is within the visible hemisphere
+            return Math.sqrt(Math.pow(width / 2 - x, 2) + Math.pow(height / 2 - y, 2)) <= projection.scale();
         }
 
         function loadData() {
@@ -143,3 +150,4 @@
     </script>
 </body>
 </html>
+
