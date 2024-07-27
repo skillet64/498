@@ -105,12 +105,14 @@
         // Draw pins
         pinsData.forEach(d => {
             const [x, y] = projection([+d.reclong, +d.reclat]);
-            context.beginPath();
-            context.arc(x, y, 3, 0, 2 * Math.PI);
-            context.fillStyle = "red";
-            context.fill();
-            context.strokeStyle = "black";
-            context.stroke();
+            if (x && y) { // Ensure coordinates are valid
+                context.beginPath();
+                context.arc(x, y, 3, 0, 2 * Math.PI);
+                context.fillStyle = "red";
+                context.fill();
+                context.strokeStyle = "black";
+                context.stroke();
+            }
         });
     }
 
@@ -211,4 +213,3 @@
 </script>
 </body>
 </html>
-
