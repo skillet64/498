@@ -63,7 +63,7 @@
     });
 
     // Load the CSV data
-    var csvUrl = 'https://skillet64.github.io/498/ml-Meteorite_Landings.csv'; // Replace with the URL to your CSV file
+    var csvUrl = 'https://skillet64.github.io/498/ml-Meteorite_Landings.csv';
 
     // Create a tooltip div
     var tooltip = d3.select("body").append("div")
@@ -87,12 +87,12 @@
             .enter().append("circle")
             .attr("cx", function(d) {
                 var coords = projection([+d.reclong, +d.reclat]);
-                console.log("Coords for pin:", coords); // Log coordinates
+                console.log("Coords for pin (cx):", coords[0], "Reclong:", d.reclong, "Reclat:", d.reclat); // Log cx coordinates
                 return coords[0];
             })
             .attr("cy", function(d) {
                 var coords = projection([+d.reclong, +d.reclat]);
-                console.log("Coords for pin:", coords); // Log coordinates
+                console.log("Coords for pin (cy):", coords[1], "Reclong:", d.reclong, "Reclat:", d.reclat); // Log cy coordinates
                 return coords[1];
             })
             .attr("r", 3)
@@ -143,4 +143,5 @@
 </script>
 </body>
 </html>
+
 
