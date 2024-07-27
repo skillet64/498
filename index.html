@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/versor@0.2/dist/versor.min.js"></script>
+    <script src="https://d3js.org/topojson.v2.min.js"></script>
     <style>
         body {
             margin: 0;
@@ -94,6 +95,9 @@
         path(sphere);
         context.stroke();
     }
+
+    // Variables for drag
+    let v0, q0, r0, a0;
 
     // Load and render data
     Promise.all([
