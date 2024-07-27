@@ -71,18 +71,7 @@
             .attr("fill", "red")
             .attr("stroke", "black")
             .attr("stroke-width", 1);
-        .on("mouseover", function(event, d) {
-                tooltip.transition()
-                    .duration(200)
-                    .style("opacity", .9);
-                tooltip.html(d.name || "No name") // Display name from CSV, fallback to "No name"
-                    .style("left", (event.pageX + 5) + "px")
-                    .style("top", (event.pageY - 28) + "px");
-            })
-            .on("mouseout", function(d) {
-                tooltip.transition()
-                    .duration(500)
-                    .style("opacity", 0);
+        
     });
 
     // Handle window resizing
