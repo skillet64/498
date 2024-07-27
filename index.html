@@ -1,215 +1,159 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="utf-8">
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="https://d3js.org/d3.v7.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/versor@0.2/dist/versor.min.js"></script>
-    <script src="https://d3js.org/topojson.v2.min.js"></script>
+    <title>Interactive Spherical Map</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.10.1/d3.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/versor/0.2.1/versor.min.js"></script>
     <style>
-        body {
-            margin: 0;
-            padding: 0;
-            overflow: hidden;
-        }
-        canvas {
-            display: block;
-            width: 100vw;
-            height: 100vh;
-        }
-        .tooltip {
-            position: absolute;
-            text-align: center;
-            padding: 5px;
-            font: 12px sans-serif;
-            background: lightsteelblue;
-            border: 0;
-            border-radius: 8px;
-            pointer-events: none;
-            opacity: 0;
-        }
-        .error {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            padding: 5px;
-            font: 12px sans-serif;
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-            border-radius: 8px;
+        body { margin: 0; }
+        canvas { display: block; }
+        .tooltip { 
+            position: absolute; 
+            background: rgba(0, 0, 0, 0.7); 
+            color: #fff; 
+            padding: 5px; 
+            border-radius: 3px; 
+            pointer-events: none; 
         }
     </style>
 </head>
 <body>
-<script type="module">
-    // Set up dimensions
-    const width = window.innerWidth;
-    const height = window.innerHeight;
+    <div class="tooltip" style="display: none;"></div>
+    <script>
+        const width = window.innerWidth;
+        const height = window.innerHeight;
+        const canvas = d3.create("canvas").attr("width", width).attr("height", height);
+        const context = canvas.node().getContext("2d");
+        document.body.appendChild(canvas.node());
 
-    // Create the canvas
-    const canvas = document.createElement("canvas");
-    canvas.width = width;
-    canvas.height = height;
-    document.body.appendChild(canvas);
-    const context = canvas.getContext("2d");
+        const projection = d3.geoOrthographic().translate([width / 2, height / 2]).scale(height / 2.5);
+        const path = d3.geoPath().projection(projection).context(context);
 
-    // Define the projection
-    const projection = d3.geoOrthographic()
-        .scale(Math.min(width, height) / 2)
-        .translate([width / 2, height / 2])
-        .clipAngle(90);
+        let v0, q0, r0, a0, l;
 
-    const path = d3.geoPath(projection, context);
+        function render(land, borders) {
+            context.clearRect(0, 0, width, height);
+            
+            // Draw the map sphere
+            context.beginPath();
+            path({type: "Sphere"});
+            context.fillStyle = "#e0e0e0";
+            context.fill();
 
-    // Define the sphere
-    const sphere = { type: "Sphere" };
-    let landData, pinsData;
+            // Draw the land
+            context.beginPath();
+            path(land);
+            context.fillStyle = "#bada55";
+            context.fill();
 
-    // Create an error div
-    const errorDiv = d3.select("body").append("div")
-        .attr("class", "error")
-        .style("display", "none");
+            // Draw country borders
+            context.beginPath();
+            path(borders);
+            context.strokeStyle = "#333";
+            context.lineWidth = 1;
+            context.stroke();
 
-    // Function to handle errors
-    function handleError(error, fileName) {
-        console.error(`Error loading ${fileName}:`, error);
-        errorDiv.style("display", "block")
-            .text(`Failed to load ${fileName}. Check the console for details.`);
-    }
-
-    // Function to render the map and pins
-    function render() {
-        if (!landData || !pinsData) {
-            console.error('Data not available for rendering');
-            return;
-        }
-
-        context.clearRect(0, 0, width, height);
-
-        // Render land
-        context.beginPath();
-        path(sphere);
-        context.fillStyle = "#fff";
-        context.fill();
-
-        context.beginPath();
-        path(landData);
-        context.fillStyle = "#000";
-        context.fill();
-
-        context.beginPath();
-        path(sphere);
-        context.stroke();
-
-        // Draw pins
-        pinsData.forEach(d => {
-            const [x, y] = projection([+d.reclong, +d.reclat]);
-            if (x && y) { // Ensure coordinates are valid
-                context.beginPath();
-                context.arc(x, y, 3, 0, 2 * Math.PI);
-                context.fillStyle = "red";
-                context.fill();
-                context.strokeStyle = "black";
-                context.stroke();
-            }
-        });
-    }
-
-    // Variables for drag
-    let v0, q0, r0, a0;
-
-    // Load and render data
-    async function loadData() {
-        try {
-            const land50Response = await fetch('https://skillet64.github.io/498/land-50m.json');
-            if (!land50Response.ok) throw new Error('Failed to fetch land-50m.json');
-            const land50Data = await land50Response.json();
-            landData = topojson.feature(land50Data, land50Data.objects.land);
-
-            const land110Response = await fetch('https://skillet64.github.io/498/land-110m.json');
-            if (!land110Response.ok) throw new Error('Failed to fetch land-110m.json');
-            const land110Data = await land110Response.json();
-            // Optionally use land110Data here if needed for fallback or different rendering
-
-            const pinsResponse = await fetch('https://skillet64.github.io/498/ml-Meteorite_Landings.csv');
-            if (!pinsResponse.ok) throw new Error('Failed to fetch ml-Meteorite_Landings.csv');
-            const pinsText = await pinsResponse.text();
-            pinsData = d3.csvParse(pinsText);
-
-            // Add tooltip functionality
-            const tooltip = d3.select("body").append("div")
-                .attr("class", "tooltip");
-
-            canvas.addEventListener("mousemove", (event) => {
-                const [x, y] = d3.pointer(event);
-                const [longitude, latitude] = projection.invert([x, y]);
-                const closest = pinsData.reduce((closest, d) => {
-                    const [px, py] = projection([+d.reclong, +d.reclat]);
-                    const distance = Math.sqrt(Math.pow(px - x, 2) + Math.pow(py - y, 2));
-                    return distance < closest.distance ? { distance, data: d } : closest;
-                }, { distance: Infinity });
-
-                if (closest.distance < 10) { // Adjust the distance threshold as needed
-                    tooltip.transition()
-                        .duration(200)
-                        .style("opacity", .9);
-                    tooltip.html(closest.data.name || "No name")
-                        .style("left", (event.pageX + 5) + "px")
-                        .style("top", (event.pageY - 28) + "px");
-                } else {
-                    tooltip.transition()
-                        .duration(500)
-                        .style("opacity", 0);
+            // Draw the pins
+            pinsData.forEach(d => {
+                const [x, y] = projection([+d.reclong, +d.reclat]);
+                if (x && y) { // Ensure coordinates are valid
+                    context.beginPath();
+                    context.arc(x, y, 3, 0, 2 * Math.PI);
+                    context.fillStyle = "red";
+                    context.fill();
+                    context.strokeStyle = "black";
+                    context.stroke();
                 }
             });
-
-            canvas.addEventListener("mouseout", () => {
-                tooltip.transition()
-                    .duration(500)
-                    .style("opacity", 0);
-            });
-
-            render(); // Ensure pins are drawn after data is loaded
-
-            // Set up drag behavior
-            const drag = d3.drag()
-                .on("start", dragstarted)
-                .on("drag", dragged);
-
-            d3.select(canvas).call(drag);
-
-            function dragstarted(event) {
-                const [x, y] = d3.pointer(event);
-                const [longitude, latitude] = projection.invert([x, y]);
-                v0 = versor.cartesian([longitude * Math.PI / 180, latitude * Math.PI / 180]);
-                q0 = versor.rotation(projection.rotate());
-            }
-
-            function dragged(event) {
-                const [x, y] = d3.pointer(event);
-                const [longitude, latitude] = projection.invert([x, y]);
-                const v1 = versor.cartesian([longitude * Math.PI / 180, latitude * Math.PI / 180]);
-                const delta = versor.delta(v0, v1);
-                const q1 = versor.multiply(q0, delta);
-                projection.rotate(versor.rotation(q1));
-                render(); // Re-render map and pins
-            }
-        } catch (error) {
-            handleError(error, 'GeoJSON or CSV files');
         }
-    }
 
-    loadData();
+        function dragstarted(event) {
+            const [x, y] = d3.pointer(event);
+            const [longitude, latitude] = projection.invert([x, y]);
+            v0 = versor.cartesian([longitude * Math.PI / 180, latitude * Math.PI / 180]);
+            q0 = versor.rotation(projection.rotate());
+        }
 
-    // Handle window resizing
-    window.addEventListener("resize", () => {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-        projection.translate([canvas.width / 2, canvas.height / 2])
-            .scale(Math.min(canvas.width, canvas.height) / 2);
-        render();
-    });
-</script>
+        function dragged(event) {
+            const [x, y] = d3.pointer(event);
+            const [longitude, latitude] = projection.invert([x, y]);
+            const v1 = versor.cartesian([longitude * Math.PI / 180, latitude * Math.PI / 180]);
+            const delta = versor.delta(v0, v1);
+            let q1 = versor.multiply(q0, delta);
+
+            const p = pointer(event, this);
+            if (p[2]) {
+                const d = (p[2] - a0) / 2;
+                const s = -Math.sin(d);
+                const c = Math.sign(Math.cos(d));
+                q1 = versor.multiply([Math.sqrt(1 - s * s), 0, 0, c * s], q1);
+            }
+
+            projection.rotate(versor.rotation(q1));
+            render(landData, countryBorders); // Re-render map and pins
+        }
+
+        function pointer(event, that) {
+            const t = d3.pointers(event, that);
+            if (t.length !== l) {
+                l = t.length;
+                if (l > 1) a0 = Math.atan2(t[1][1] - t[0][1], t[1][0] - t[0][0]);
+                dragstarted.apply(that, [event, that]);
+            }
+            if (l > 1) {
+                const x = d3.mean(t, p => p[0]);
+                const y = d3.mean(t, p => p[1]);
+                const a = Math.atan2(t[1][1] - t[0][1], t[1][0] - t[0][0]);
+                return [x, y, a];
+            }
+            return t[0];
+        }
+
+        function loadData() {
+            // Load GeoJSON data
+            d3.json('https://skillet64.github.io/498/land-50m.json').then(data => {
+                landData = data;
+                return d3.json('https://skillet64.github.io/498/land-110m.json');
+            }).then(data => {
+                countryBorders = data;
+                return d3.csv('https://skillet64.github.io/498/ml-Meteorite_Landings.csv');
+            }).then(data => {
+                pinsData = data;
+                render(landData, countryBorders);
+            }).catch(error => {
+                console.error('Error loading data:', error);
+            });
+        }
+
+        loadData();
+
+        d3.select(canvas.node())
+            .call(d3.drag()
+                .on("start", dragstarted)
+                .on("drag", dragged));
+
+        // Tooltip handling
+        const tooltip = d3.select(".tooltip");
+        canvas.node().addEventListener("mousemove", (event) => {
+            const [x, y] = d3.pointer(event, canvas.node());
+            const [longitude, latitude] = projection.invert([x, y]);
+            pinsData.forEach(d => {
+                const [px, py] = projection([+d.reclong, +d.reclat]);
+                if (Math.hypot(px - x, py - y) < 5) {
+                    tooltip.style("display", "block")
+                        .style("left", `${event.pageX + 5}px`)
+                        .style("top", `${event.pageY - 28}px`)
+                        .text(d.name);
+                }
+            });
+        });
+
+        canvas.node().addEventListener("mouseleave", () => {
+            tooltip.style("display", "none");
+        });
+
+    </script>
 </body>
 </html>
