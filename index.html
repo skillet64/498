@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interactive Spherical Map</title>
+    <title>Interactive Spherical Map with Heat Map</title>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/versor@0.2/dist/versor.min.js"></script>
     <script src="https://d3js.org/topojson.v3.min.js"></script>
@@ -45,12 +45,10 @@
         const height = window.innerHeight;
         const radius = Math.min(width, height) / 2;
 
-        // Create and append canvas
         const canvas = d3.create("canvas").attr("width", width).attr("height", height);
         const context = canvas.node().getContext("2d");
         document.body.appendChild(canvas.node());
 
-        // Set up projection and path
         const projection = d3.geoOrthographic().translate([width / 2, height / 2]).scale(radius);
         const path = d3.geoPath().projection(projection).context(context);
 
@@ -87,33 +85,32 @@
         function drawHeatMap() {
             console.log('Drawing heat map');
 
-            // Create an off-screen canvas to compute the heat map
             const heatCanvas = document.createElement("canvas");
             heatCanvas.width = width;
             heatCanvas.height = height;
             const heatContext = heatCanvas.getContext("2d");
 
-            // Define a color scale
-            const colorScale = d3.scaleSequential(d3.interpolateWarm)
-                .domain([0, 100]); // Adjust the domain as needed for your data
+            const colorScale = d3.scaleSequential(d3.interpolateWarm).domain([0, 100]); // Adjust the domain as needed
 
-            // Create a kernel density function
-            const kdf = d3.kernelDensityEstimator(d3.kernelEpanechnikov(20), projection([0, 0]));
-
-            // Calculate density
-            const density = kdf(pinsData.map(d => projection([+d.reclong, +d.reclat])));
-
-            // Draw the heat map on the off-screen canvas
-            density.forEach(([x, y, value]) => {
-                if (x !== undefined && y !== undefined) {
-                    heatContext.beginPath();
-                    heatContext.arc(x, y, 10, 0, 2 * Math.PI);
-                    heatContext.fillStyle = colorScale(value);
-                    heatContext.fill();
+            // Use a simple density function for demo purposes
+            const density = {};
+            pinsData.forEach(d => {
+                const [x, y] = projection([+d.reclong, +d.reclat]);
+                if (x && y) {
+                    const key = `${Math.floor(x)},${Math.floor(y)}`;
+                    density[key] = (density[key] || 0) + 1;
                 }
             });
 
-            // Draw the heat map on the main canvas
+            Object.keys(density).forEach(key => {
+                const [x, y] = key.split(',').map(Number);
+                const value = density[key];
+                heatContext.beginPath();
+                heatContext.arc(x, y, 10, 0, 2 * Math.PI);
+                heatContext.fillStyle = colorScale(value);
+                heatContext.fill();
+            });
+
             context.globalAlpha = 0.6; // Set the transparency for the heat map
             context.drawImage(heatCanvas, 0, 0);
             context.globalAlpha = 1; // Reset transparency
@@ -148,7 +145,6 @@
 
         loadData();
 
-        // Tooltip handling
         const tooltip = d3.select(".tooltip");
         canvas.node().addEventListener("mousemove", (event) => {
             const [x, y] = d3.pointer(event, canvas.node());
@@ -173,7 +169,6 @@
             tooltip.style("display", "none");
         });
 
-        // Setup dragging
         function setupDrag() {
             let v0, q0, r0, a0, l;
 
@@ -216,9 +211,8 @@
                 }
 
                 projection.rotate(versor.rotation(q1));
-
-                if (delta[0] < 0.7) dragstarted.apply(this, [event, this]);
                 console.log('Dragging - new projection rotation:', projection.rotate());
+
                 render();
             }
 
