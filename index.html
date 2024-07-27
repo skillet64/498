@@ -62,7 +62,7 @@
 
     const path = d3.geoPath(projection, context);
 
-    // Define the sphere and land data
+    // Define the sphere
     const sphere = { type: "Sphere" };
     let landData, pinsData;
 
@@ -111,82 +111,87 @@
     let v0, q0, r0, a0;
 
     // Load and render data
-    Promise.all([
-        fetch('https://skillet64.github.io/498/land-50m.json').then(response => response.json()).then(data => topojson.feature(data, data.objects.land)).catch(error => handleError(error, 'land-50m.json')),
-        fetch('https://skillet64.github.io/498/land-110m.json').then(response => response.json()).then(data => topojson.feature(data, data.objects.land)).catch(error => handleError(error, 'land-110m.json'))
-    ]).then(([land50Data, land110Data]) => {
-        landData = land50Data;
-        land110 = land110Data;
-        render();
+    async function loadData() {
+        try {
+            const land50Response = await fetch('https://skillet64.github.io/498/land-50m.json');
+            const land50Data = await land50Response.json();
+            landData = topojson.feature(land50Data, land50Data.objects.land);
 
-        // Load and plot pins
-        fetch('https://skillet64.github.io/498/ml-Meteorite_Landings.csv')
-            .then(response => response.text())
-            .then(text => d3.csvParse(text))
-            .then(data => {
-                pinsData = data;
+            const land110Response = await fetch('https://skillet64.github.io/498/land-110m.json');
+            const land110Data = await land110Response.json();
+            // Optionally use land110Data here if needed for fallback or different rendering
 
-                // Add tooltip functionality
-                const tooltip = d3.select("body").append("div")
-                    .attr("class", "tooltip");
+            render();
 
-                canvas.addEventListener("mousemove", (event) => {
-                    const [x, y] = d3.pointer(event);
-                    const [longitude, latitude] = projection.invert([x, y]);
-                    const closest = pinsData.reduce((closest, d) => {
-                        const [px, py] = projection([+d.reclong, +d.reclat]);
-                        const distance = Math.sqrt(Math.pow(px - x, 2) + Math.pow(py - y, 2));
-                        return distance < closest.distance ? { distance, data: d } : closest;
-                    }, { distance: Infinity });
+            // Load and plot pins
+            const pinsResponse = await fetch('https://skillet64.github.io/498/ml-Meteorite_Landings.csv');
+            const pinsText = await pinsResponse.text();
+            pinsData = d3.csvParse(pinsText);
 
-                    if (closest.distance < 10) { // Adjust the distance threshold as needed
-                        tooltip.transition()
-                            .duration(200)
-                            .style("opacity", .9);
-                        tooltip.html(closest.data.name || "No name")
-                            .style("left", (event.pageX + 5) + "px")
-                            .style("top", (event.pageY - 28) + "px");
-                    } else {
-                        tooltip.transition()
-                            .duration(500)
-                            .style("opacity", 0);
-                    }
-                });
+            // Add tooltip functionality
+            const tooltip = d3.select("body").append("div")
+                .attr("class", "tooltip");
 
-                canvas.addEventListener("mouseout", () => {
+            canvas.addEventListener("mousemove", (event) => {
+                const [x, y] = d3.pointer(event);
+                const [longitude, latitude] = projection.invert([x, y]);
+                const closest = pinsData.reduce((closest, d) => {
+                    const [px, py] = projection([+d.reclong, +d.reclat]);
+                    const distance = Math.sqrt(Math.pow(px - x, 2) + Math.pow(py - y, 2));
+                    return distance < closest.distance ? { distance, data: d } : closest;
+                }, { distance: Infinity });
+
+                if (closest.distance < 10) { // Adjust the distance threshold as needed
+                    tooltip.transition()
+                        .duration(200)
+                        .style("opacity", .9);
+                    tooltip.html(closest.data.name || "No name")
+                        .style("left", (event.pageX + 5) + "px")
+                        .style("top", (event.pageY - 28) + "px");
+                } else {
                     tooltip.transition()
                         .duration(500)
                         .style("opacity", 0);
-                });
+                }
+            });
 
-                render(); // Ensure pins are drawn after data is loaded
-            })
-            .catch(error => handleError(error, 'CSV file'));
+            canvas.addEventListener("mouseout", () => {
+                tooltip.transition()
+                    .duration(500)
+                    .style("opacity", 0);
+            });
 
-        // Set up drag behavior
-        const drag = d3.drag()
-            .on("start", dragstarted)
-            .on("drag", dragged);
+            render(); // Ensure pins are drawn after data is loaded
 
-        d3.select(canvas).call(drag);
+            // Set up drag behavior
+            const drag = d3.drag()
+                .on("start", dragstarted)
+                .on("drag", dragged);
 
-        function dragstarted(event) {
-            const [x, y] = d3.pointer(event);
-            const [longitude, latitude] = projection.invert([x, y]);
-            v0 = versor.cartesian([longitude * Math.PI / 180, latitude * Math.PI / 180]);
-            q0 = versor.rotation(projection.rotate());
+            d3.select(canvas).call(drag);
+
+            function dragstarted(event) {
+                const [x, y] = d3.pointer(event);
+                const [longitude, latitude] = projection.invert([x, y]);
+                v0 = versor.cartesian([longitude * Math.PI / 180, latitude * Math.PI / 180]);
+                q0 = versor.rotation(projection.rotate());
+            }
+
+            function dragged(event) {
+                const [x, y] = d3.pointer(event);
+                const [longitude, latitude] = projection.invert([x, y]);
+                const v1 = versor.cartesian([longitude * Math.PI / 180, latitude * Math.PI / 180]);
+                const delta = versor.delta(v0, v1);
+                const q1 = versor.multiply(q0, delta);
+                projection.rotate(versor.rotation(q1));
+                render(); // Re-render map and pins
+            }
+        } catch (error) {
+            handleError(error, 'GeoJSON or CSV files');
         }
+    }
 
-        function dragged(event) {
-            const [x, y] = d3.pointer(event);
-            const [longitude, latitude] = projection.invert([x, y]);
-            const v1 = versor.cartesian([longitude * Math.PI / 180, latitude * Math.PI / 180]);
-            const delta = versor.delta(v0, v1);
-            const q1 = versor.multiply(q0, delta);
-            projection.rotate(versor.rotation(q1));
-            render(); // Re-render map and pins
-        }
-    }).catch(error => handleError(error, 'GeoJSON files'));
+    loadData();
 
     // Handle window resizing
     window.addEventListener("resize", () => {
