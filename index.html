@@ -61,13 +61,13 @@
             // Draw the map sphere
             context.beginPath();
             path({type: "Sphere"});
-            context.fillStyle = "#e0e0e0";
+            context.fillStyle = "#0000ff"; // Blue for oceans
             context.fill();
 
             // Draw the land
             context.beginPath();
             path(landData);
-            context.fillStyle = "#bada55";
+            context.fillStyle = "#bada55"; // Green for land
             context.fill();
 
             // Draw country borders
@@ -80,7 +80,7 @@
             // Draw the pins
             pinsData.forEach(d => {
                 const [x, y] = projection([+d.reclong, +d.reclat]);
-                if (x && y && isPinVisible([+d.reclong, +d.reclat])) { // Ensure coordinates are valid and pin is visible
+                if (x !== undefined && y !== undefined && isPinVisible([+d.reclong, +d.reclat])) {
                     context.beginPath();
                     context.arc(x, y, 3, 0, 2 * Math.PI);
                     context.fillStyle = "red";
@@ -95,7 +95,9 @@
             // Convert geographic coordinates to Cartesian coordinates
             const [x, y] = projection([long, lat]);
             // Check if the point is within the visible hemisphere
-            return Math.sqrt(Math.pow(width / 2 - x, 2) + Math.pow(height / 2 - y, 2)) <= projection.scale();
+            const [centerX, centerY] = [width / 2, height / 2];
+            const distanceFromCenter = Math.sqrt(Math.pow(x - centerX, 2) + Math.pow(y - centerY, 2));
+            return distanceFromCenter <= projection.scale();
         }
 
         function loadData() {
@@ -147,7 +149,62 @@
         canvas.node().addEventListener("mouseleave", () => {
             tooltip.style("display", "none");
         });
+
+        // Setup dragging
+        function setupDrag() {
+            let v0, q0, r0, a0, l;
+
+            function pointer(event, that) {
+                const t = d3.pointers(event, that);
+
+                if (t.length !== l) {
+                    l = t.length;
+                    if (l > 1) a0 = Math.atan2(t[1][1] - t[0][1], t[1][0] - t[0][0]);
+                    dragstarted.apply(that, [event, that]);
+                }
+
+                if (l > 1) {
+                    const x = d3.mean(t, p => p[0]);
+                    const y = d3.mean(t, p => p[1]);
+                    const a = Math.atan2(t[1][1] - t[0][1], t[1][0] - t[0][0]);
+                    return [x, y, a];
+                }
+
+                return t[0];
+            }
+
+            function dragstarted({x, y}) {
+                v0 = versor.cartesian(projection.invert([x, y]));
+                q0 = versor(r0 = projection.rotate());
+            }
+
+            function dragged(event) {
+                const v1 = versor.cartesian(projection.rotate(r0).invert([event.x, event.y]));
+                const delta = versor.delta(v0, v1);
+                let q1 = versor.multiply(q0, delta);
+
+                const p = pointer(event, this);
+                if (p[2]) {
+                    const d = (p[2] - a0) / 2;
+                    const s = -Math.sin(d);
+                    const c = Math.sign(Math.cos(d));
+                    q1 = versor.multiply([Math.sqrt(1 - s * s), 0, 0, c * s], q1);
+                }
+
+                projection.rotate(versor.rotation(q1));
+
+                if (delta[0] < 0.7) dragstarted.apply(this, [event, this]);
+                render();
+            }
+
+            return d3.drag()
+                .on("start", dragstarted)
+                .on("drag", dragged);
+        }
+
+        d3.select(canvas.node()).call(setupDrag());
     </script>
 </body>
 </html>
+
 
