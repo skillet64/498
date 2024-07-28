@@ -19,26 +19,25 @@
         }
         .chart-container {
             position: absolute;
-            top: 0;
-            right: 0;
+            top: 10px;
+            right: 10px;
             width: 300px;
-            height: 300px; /* Adjust this based on the height of your bar chart */
+            height: 500px; /* Increased height for more space */
             background: white;
             padding: 10px;
             border-radius: 5px;
             overflow: auto;
-            display: flex;
-            flex-direction: column;
         }
         .bar-chart {
-            flex-grow: 1;
+            width: 100%;
+            height: 100%;
         }
         .map-container {
             position: absolute;
-            top: 300px; /* Adjust this based on the height of your chart-container */
+            top: 0;
             left: 0;
-            width: 100vw;
-            height: calc(100vh - 300px); /* Adjust height to fit the remaining space */
+            width: calc(100vw - 320px); /* Adjust width to fit the remaining space */
+            height: calc(100vh - 10px); /* Adjust height to fit the remaining space below the bar chart */
         }
     </style>
 </head>
@@ -51,8 +50,8 @@
         <canvas id="mapCanvas"></canvas>
     </div>
     <script>
-        const width = window.innerWidth - 300; // Adjust width to account for the bar chart
-        const height = window.innerHeight - 300; // Adjust height to fit the remaining space below the bar chart
+        const width = window.innerWidth - 320; // Adjust width to account for the bar chart
+        const height = window.innerHeight - 10; // Adjust height to fit the remaining space below the bar chart
         const radius = Math.min(width, height) / 2;
 
         const canvas = d3.select("#mapCanvas").attr("width", width).attr("height", height);
@@ -69,13 +68,13 @@
             // Draw the map sphere
             context.beginPath();
             path({type: "Sphere"});
-            context.fillStyle = "#0000ff"; // Blue for oceans
+            context.fillStyle = "#a0c4ff"; // Light blue for oceans
             context.fill();
 
             // Draw the land
             context.beginPath();
             path(landData);
-            context.fillStyle = "#bada55"; // Green for land
+            context.fillStyle = "#4caf50"; // Green for land
             context.fill();
 
             // Draw country borders
@@ -147,15 +146,15 @@
 
             const svg = d3.select('.bar-chart').append('svg')
                 .attr('width', 300)
-                .attr('height', 300); // Adjust height based on the chart container height
+                .attr('height', 500); // Adjust height based on the chart container height
 
             const x = d3.scaleLinear()
                 .domain([0, d3.max(data, d => d.mass)])
-                .range([0, 300]);
+                .range([0, 280]); // Adjust width to fit within the chart
 
             const y = d3.scaleBand()
                 .domain(data.map(d => d.name))
-                .range([0, 300]) // Adjust range to fit within the chart height
+                .range([0, 480]) // Adjust range to fit within the chart height
                 .padding(0.1);
 
             // Add bars
@@ -175,11 +174,11 @@
 
             svg.append('g')
                 .attr('class', 'y-axis')
-                .attr('transform', 'translate(0, 0)')
-                .call(yAxis)
-                .selectAll('text')
-                .attr('x', -10) // Position text labels to the left of the axis
-                .style('text-anchor', 'end');
+                .attr('transform', 'translate(10, 10)') // Adjust position to fit within the chart area
+                .call(yAxis);
+
+            // Hide x-axis
+            svg.selectAll('.x-axis').remove();
         }
 
         function rotateMap(longitudeDelta, latitudeDelta) {
