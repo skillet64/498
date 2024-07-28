@@ -28,7 +28,7 @@
         }
         .bar-chart, .stacked-bar-chart {
             width: 100%;
-            height: 50%;
+            height: 50%; /* Adjust based on space needed for each chart */
         }
         .map-container {
             width: 100vw;
@@ -138,12 +138,11 @@
                 d3.csv('https://skillet64.github.io/498/biggest.csv'),
                 d3.csv('https://skillet64.github.io/498/ml-Meteorite_Landings%20Pivot-ml-Meteorite_Landings%20Pivot.csv', function(d, i, columns) {
                     if (i < 2) return; // Skip the first two rows
-                    // Parse columns into a usable format
                     return {
-                        year: d[columns[0]], // First column header
-                        fell: +d[columns[1]], // Second column header
-                        found: +d[columns[2]], // Third column header
-                        total: +d[columns[3]] // Fourth column header
+                        year: d[columns[0]], // First column header: "fell"
+                        fell: +d[columns[1]], // Second column header: "Fell"
+                        found: +d[columns[2]], // Third column header: "Found"
+                        total: +d[columns[3]] // Fourth column header: "Grand Total"
                     };
                 })
             ]).then(([land50, land110, mlData, biggestData, fellFoundData]) => {
@@ -155,7 +154,6 @@
                 pinsData = mlData;
                 largestData = biggestData;
                 
-                // Check if fellFoundData is defined and not empty
                 if (fellFoundData && fellFoundData.length > 0) {
                     fellFoundData = fellFoundData;
                 } else {
@@ -191,39 +189,56 @@
                 .padding(0.1);
 
             // Add bars
-            svg.selectAll('.bar')
+            const bars = svg.selectAll('.bar')
                 .data(data)
-                .enter().append('rect')
-                .attr('class', 'bar')
+                .enter().append('g')
+                .attr('class', 'bar');
+
+            bars.append('rect')
                 .attr('x', 0)
                 .attr('y', d => y(d.name))
                 .attr('width', d => x(d.mass))
                 .attr('height', y.bandwidth())
-                .attr('fill', '#69b3a2');
+                .attr('fill', '#69b3a2')
+                .on('mouseover', (event, d) => {
+                    tooltip.style("display", "block")
+                        .style("left", `${event.pageX + 5}px`)
+                        .style("top", `${event.pageY - 28}px`)
+                        .text(`Mass: ${d.mass} g`);
+                })
+                .on('mousemove', (event) => {
+                    tooltip.style("left", `${event.pageX + 5}px`)
+                        .style("top", `${event.pageY - 28}px`);
+                })
+                .on('mouseleave', () => {
+                    tooltip.style("display", "none");
+                });
 
             // Add y-axis
             const yAxis = d3.axisLeft(y)
-                .tickSize(0); // Remove axis line
+                .tickSize(0) // Remove axis line
+                .tickPadding(10); // Add padding for better readability
 
             svg.append('g')
                 .attr('class', 'y-axis')
                 .attr('transform', 'translate(0, 0)')
                 .call(yAxis)
-                .selectAll('text')
-                .attr('x', -10) // Position text labels to the left of the axis
-                .style('text-anchor', 'end');
+                .selectAll('.tick text')
+                .attr('x', -5)
+                .attr('dy', 4);
         }
 
         function drawStackedBarChart() {
-            if (!fellFoundData || fellFoundData.length === 0) {
-                console.error('No data available for stacked bar chart');
-                return;
-            }
+            const stack = d3.stack()
+                .keys(['fell', 'Found', 'total'])
+                .order(d3.stackOrderNone)
+                .offset(d3.stackOffsetNone);
 
             const data = fellFoundData.map(d => ({
                 year: d.year,
-                fell: +d.fell,
-                found: +d.found
+                fell: d.fell,
+                Found: d.Found,
+                total: d.total
             }));
 
             const svg = d3.select('.stacked-bar-chart').append('svg')
@@ -236,82 +251,45 @@
                 .padding(0.1);
 
             const y = d3.scaleLinear()
-                .domain([0, d3.max(data, d => d.fell + d.found)])
+                .domain([0, d3.max(data, d => d.fell + d.Found + d.total)])
                 .nice()
-                .range([chartContainerHeight / 2, 0]);
+                .range([chartContainerHeight / 2, 0]); // Adjust range to fit within the chart height
 
-            const color = d3.scaleOrdinal()
-                .domain(['fell', 'found'])
-                .range(['#69b3a2', '#404080']);
-
-            // Stack the data
-            const stack = d3.stack()
-                .keys(['fell', 'found'])
-                .order(d3.stackOrderNone)
-                .offset(d3.stackOffsetNone);
+            const colors = d3.scaleOrdinal()
+                .domain(['fell', 'Found', 'total'])
+                .range(['#e41a1c', '#377eb8', '#4daf4a']); // Colors for different segments
 
             const series = stack(data);
 
-            // Draw the bars
-            svg.selectAll('.series')
+            svg.selectAll('.layer')
                 .data(series)
                 .enter().append('g')
-                .attr('class', 'series')
-                .attr('fill', d => color(d.key))
+                .attr('class', 'layer')
+                .attr('fill', d => colors(d.key))
                 .selectAll('rect')
                 .data(d => d)
                 .enter().append('rect')
                 .attr('x', d => x(d.data.year))
                 .attr('y', d => y(d[1]))
                 .attr('height', d => y(d[0]) - y(d[1]))
-                .attr('width', x.bandwidth());
+                .attr('width', x.bandwidth())
+                .append('title')
+                .text(d => `${d.key}: ${d[1] - d[0]}`);
 
-            // Add x-axis
             svg.append('g')
+                .attr('class', 'x-axis')
                 .attr('transform', `translate(0, ${chartContainerHeight / 2})`)
-                .call(d3.axisBottom(x));
+                .call(d3.axisBottom(x))
+                .selectAll('.tick text')
+                .attr('y', 10);
 
-            // Add y-axis
             svg.append('g')
+                .attr('class', 'y-axis')
                 .call(d3.axisLeft(y));
         }
 
-        function rotateMap(longitudeDelta, latitudeDelta) {
-            let [longitude, latitude] = projection.rotate();
-            longitude = (longitude + longitudeDelta) % 360;
-            latitude = Math.max(-90, Math.min(90, latitude + latitudeDelta)); // Constrain latitude between -90 and 90
-            projection.rotate([longitude, latitude]);
-            render();
-        }
-
-        loadData();
-
-        const tooltip = d3.select(".tooltip");
-        canvas.node().addEventListener("mousemove", (event) => {
-            const [x, y] = d3.pointer(event, canvas.node());
-            const [longitude, latitude] = projection.invert([x, y]);
-            let found = false;
-            pinsData.forEach(d => {
-                const [px, py] = projection([+d.reclong, +d.reclat]);
-                if (Math.hypot(px - x, py - y) < 5) {
-                    tooltip.style("display", "block")
-                        .style("left", `${event.pageX + 5}px`)
-                        .style("top", `${event.pageY - 28}px`)
-                        .text(d.name);
-                    found = true;
-                }
-            });
-            if (!found) tooltip.style("display", "none");
-        });
-
-        canvas.node().addEventListener("mouseleave", () => {
-            tooltip.style("display", "none");
-        });
-
-        d3.select("body").call(d3.drag().on("drag", function(event) {
-            const [dx, dy] = [event.dx, event.dy];
-            rotateMap(dx / 10, dy / 10);
-        }));
+        loadData(); // Load and render all data
     </script>
 </body>
 </html>
+
