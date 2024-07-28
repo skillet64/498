@@ -18,19 +18,32 @@
             pointer-events: none; 
         }
         .chart-container {
+            position: absolute;
+            top: 0;
+            right: 0;
             width: 100%;
+            height: 300px; /* Height for the charts section */
             background: white;
             padding: 10px;
             border-radius: 5px;
+            overflow: auto;
+            display: flex;
+            flex-direction: column;
         }
         .bar-chart, .stacked-bar-chart {
             width: 100%;
-            height: 300px; /* Adjust based on your needs */
+            height: 50%;
         }
         .map-container {
+            position: absolute;
+            top: 300px; /* Position the map container below the charts */
+            left: 0;
             width: 100vw;
-            height: calc(100vh - 600px); /* Adjust height to fit the remaining space */
-            background: white;
+            height: calc(100vh - 300px); /* Remaining height for the globe */
+        }
+        #mapCanvas {
+            width: 100%;
+            height: 100%;
         }
     </style>
 </head>
@@ -45,13 +58,19 @@
     </div>
     <script>
         const width = window.innerWidth;
-        const height = window.innerHeight - 600; // Adjust height to fit the remaining space
+        const height = window.innerHeight - 300; // Adjust for the height of the chart container
+        const radius = Math.min(width, height) / 2.2; // Adjust scale for the globe
 
-        const canvas = d3.select("#mapCanvas").attr("width", width).attr("height", height);
+        const canvas = d3.select("#mapCanvas")
+            .attr("width", width)
+            .attr("height", height);
+
         const context = canvas.node().getContext("2d");
 
-        const radius = Math.min(width, height) / 2;
-        const projection = d3.geoOrthographic().translate([width / 2, height / 2]).scale(radius);
+        const projection = d3.geoOrthographic()
+            .translate([width / 2, height / 2])
+            .scale(radius);
+
         const path = d3.geoPath().projection(projection).context(context);
 
         let landData, countryBorders, pinsData, largestData, fellFoundData;
@@ -120,13 +139,33 @@
                 d3.json('https://skillet64.github.io/498/land-110m.json'),
                 d3.csv('https://skillet64.github.io/498/Sheet%201-ml-Meteorite_Landings.csv'),
                 d3.csv('https://skillet64.github.io/498/biggest.csv'),
-                d3.csv('https://skillet64.github.io/498/ml-Meteorite_Landings%20Pivot-ml-Meteorite_Landings%20Pivot.csv')
+                d3.csv('https://skillet64.github.io/498/ml-Meteorite_Landings%20Pivot-ml-Meteorite_Landings%20Pivot.csv', function(d, i, columns) {
+                    if (i < 2) return; // Skip the first two rows
+                    // Parse columns into a usable format
+                    return {
+                        year: d[columns[0]], // First column header
+                        fell: +d[columns[1]], // Second column header
+                        found: +d[columns[2]], // Third column header
+                        total: +d[columns[3]] // Fourth column header
+                    };
+                })
             ]).then(([land50, land110, mlData, biggestData, fellFoundData]) => {
+                console.log('Data loaded successfully');
+                console.log('fellFoundData:', fellFoundData); // Log the data to check its structure
+                
                 landData = topojson.feature(land50, land50.objects.land);
                 countryBorders = topojson.feature(land110, land110.objects.land);
                 pinsData = mlData;
                 largestData = biggestData;
-                fellFoundData = fellFoundData;
+                
+                // Check if fellFoundData is defined and not empty
+                if (fellFoundData && fellFoundData.length > 0) {
+                    fellFoundData = fellFoundData;
+                } else {
+                    console.error('fellFoundData is undefined or empty');
+                    fellFoundData = []; // Default to an empty array
+                }
+
                 render();
                 drawBarChart(); // Draw the horizontal bar chart
                 drawStackedBarChart(); // Draw the stacked bar chart
@@ -143,11 +182,139 @@
 
             const svg = d3.select('.bar-chart').append('svg')
                 .attr('width', '100%')
-                .attr('height', 300); // Adjust height based on the chart container height
+                .attr('height', '100%'); // Adjust height based on the chart container height
 
             const x = d3.scaleLinear()
                 .domain([0, d3.max(data, d => d.mass)])
                 .range([0, width]);
 
             const y = d3.scaleBand()
-                .domain(data.map(d => d.name)
+                .domain(data.map(d => d.name))
+                .range([0, height / 2]) // Adjust range to fit within the chart height
+                .padding(0.1);
+
+            // Add bars
+            svg.selectAll('.bar')
+                .data(data)
+                .enter().append('rect')
+                .attr('class', 'bar')
+                .attr('x', 0)
+                .attr('y', d => y(d.name))
+                .attr('width', d => x(d.mass))
+                .attr('height', y.bandwidth())
+                .attr('fill', '#69b3a2');
+
+            // Add y-axis
+            const yAxis = d3.axisLeft(y)
+                .tickSize(0); // Remove axis line
+
+            svg.append('g')
+                .attr('class', 'y-axis')
+                .attr('transform', 'translate(0, 0)')
+                .call(yAxis)
+                .selectAll('text')
+                .attr('x', -10) // Position text labels to the left of the axis
+                .style('text-anchor', 'end');
+        }
+
+        function drawStackedBarChart() {
+            if (!fellFoundData || fellFoundData.length === 0) {
+                console.error('No data available for stacked bar chart');
+                return;
+            }
+
+            const data = fellFoundData.map(d => ({
+                year: d.year,
+                fell: +d.fell,
+                found: +d.found
+            }));
+
+            const svg = d3.select('.stacked-bar-chart').append('svg')
+                .attr('width', '100%')
+                .attr('height', '100%'); // Adjust height based on the chart container height
+
+            const x = d3.scaleBand()
+                .domain(data.map(d => d.year))
+                .range([0, width])
+                .padding(0.1);
+
+            const y = d3.scaleLinear()
+                .domain([0, d3.max(data, d => d.fell + d.found)])
+                .nice()
+                .range([height / 2, 0]);
+
+            const color = d3.scaleOrdinal()
+                .domain(['fell', 'found'])
+                .range(['#69b3a2', '#404080']);
+
+            // Stack the data
+            const stack = d3.stack()
+                .keys(['fell', 'found'])
+                .order(d3.stackOrderNone)
+                .offset(d3.stackOffsetNone);
+
+            const series = stack(data);
+
+            // Draw the bars
+            svg.selectAll('.series')
+                .data(series)
+                .enter().append('g')
+                .attr('class', 'series')
+                .attr('fill', d => color(d.key))
+                .selectAll('rect')
+                .data(d => d)
+                .enter().append('rect')
+                .attr('x', d => x(d.data.year))
+                .attr('y', d => y(d[1]))
+                .attr('height', d => y(d[0]) - y(d[1]))
+                .attr('width', x.bandwidth());
+
+            // Add x-axis
+            svg.append('g')
+                .attr('transform', 'translate(0, ' + (height / 2) + ')')
+                .call(d3.axisBottom(x));
+
+            // Add y-axis
+            svg.append('g')
+                .call(d3.axisLeft(y));
+        }
+
+        function rotateMap(longitudeDelta, latitudeDelta) {
+            let [longitude, latitude] = projection.rotate();
+            longitude = (longitude + longitudeDelta) % 360;
+            latitude = Math.max(-90, Math.min(90, latitude + latitudeDelta)); // Constrain latitude between -90 and 90
+            projection.rotate([longitude, latitude]);
+            render();
+        }
+
+        loadData();
+
+        const tooltip = d3.select(".tooltip");
+        canvas.node().addEventListener("mousemove", (event) => {
+            const [x, y] = d3.pointer(event, canvas.node());
+            const [longitude, latitude] = projection.invert([x, y]);
+            let found = false;
+            pinsData.forEach(d => {
+                const [px, py] = projection([+d.reclong, +d.reclat]);
+                if (Math.hypot(px - x, py - y) < 5) {
+                    tooltip.style("display", "block")
+                        .style("left", `${event.pageX + 5}px`)
+                        .style("top", `${event.pageY - 28}px`)
+                        .text(d.name);
+                    found = true;
+                }
+            });
+            if (!found) tooltip.style("display", "none");
+        });
+
+        canvas.node().addEventListener("mouseleave", () => {
+            tooltip.style("display", "none");
+        });
+
+        d3.select("body").call(d3.drag().on("drag", function(event) {
+            const [dx, dy] = [event.dx, event.dy];
+            rotateMap(dx / 10, dy / 10);
+        }));
+    </script>
+</body>
+</html>
