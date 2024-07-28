@@ -36,11 +36,18 @@
             padding: 10px;
             box-sizing: border-box;
         }
-        .bar-chart-container {
-            height: 200px; /* Adjust as needed */
+        .bar-chart-container, .stacked-bar-chart-container {
+            display: flex;
+            align-items: flex-start;
+            width: 100%;
+            padding: 10px;
+            box-sizing: border-box;
         }
-        .stacked-bar-chart-container {
-            height: 200px; /* Adjust as needed */
+        .bar-chart {
+            height: 300px; /* Adjust height as needed */
+        }
+        .stacked-bar-chart {
+            height: 300px; /* Adjust height as needed */
         }
         .text-container {
             width: 20%; /* Adjust width as needed */
@@ -55,7 +62,7 @@
         }
         .map-container {
             width: 100%;
-            height: calc(100vh - 400px); /* Adjust height for the map */
+            height: calc(100vh - 600px); /* Adjust height for the map */
             position: relative;
         }
         #mapCanvas {
@@ -84,7 +91,7 @@
         <canvas id="mapCanvas"></canvas>
     </div>
     <script>
-        const chartContainerHeight = 400; // Combined height for the charts section
+        const chartContainerHeight = 600; // Combined height for the charts section
         const width = window.innerWidth;
         const height = window.innerHeight - chartContainerHeight; // Height for the map
         const radius = Math.min(width, height) / 2.2; // Adjust scale for the globe
@@ -212,11 +219,11 @@
 
             const x = d3.scaleLinear()
                 .domain([0, d3.max(data, d => d.mass)])
-                .range([0, width * 0.5]); // Adjust based on the bar chart width
+                .range([0, d3.select('.bar-chart').node().getBoundingClientRect().width]);
 
             const y = d3.scaleBand()
                 .domain(data.map(d => d.name))
-                .range([0, 200]) // Adjust range to fit within the chart height
+                .range([0, d3.select('.bar-chart').node().getBoundingClientRect().height])
                 .padding(0.1);
 
             // Add bars
@@ -228,9 +235,8 @@
                 .attr('y', d => y(d.name))
                 .attr('width', d => x(d.mass))
                 .attr('height', y.bandwidth())
-                .attr('fill', '#69b3a2')
                 .append('title')
-                .text(d => `${d.mass}`); // Tooltip text for the bars
+                .text(d => `${d.mass} grams`); // Tooltip text for the bars
 
             // Add y-axis
             const yAxis = d3.axisLeft(y)
@@ -264,13 +270,13 @@
 
             const x = d3.scaleBand()
                 .domain(data.map(d => d.year))
-                .range([0, width * 0.5])
+                .range([0, d3.select('.stacked-bar-chart').node().getBoundingClientRect().width])
                 .padding(0.1);
 
             const y = d3.scaleLinear()
                 .domain([0, d3.max(data, d => d.fell + d.Found + d.total)])
                 .nice()
-                .range([200, 0]); // Adjust range to fit within the chart height
+                .range([d3.select('.stacked-bar-chart').node().getBoundingClientRect().height, 0]); // Adjust range to fit within the chart height
 
             const colors = d3.scaleOrdinal()
                 .domain(['fell', 'Found', 'total'])
@@ -295,7 +301,7 @@
 
             svg.append('g')
                 .attr('class', 'x-axis')
-                .attr('transform', `translate(0, 200)`)
+                .attr('transform', `translate(0, ${d3.select('.stacked-bar-chart').node().getBoundingClientRect().height})`)
                 .call(d3.axisBottom(x))
                 .selectAll('.tick text')
                 .attr('y', 10);
