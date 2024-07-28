@@ -22,7 +22,7 @@
             top: 0;
             right: 0;
             width: 300px;
-            height: 100vh;
+            height: 300px; /* Adjust this based on the height of your bar chart */
             background: white;
             padding: 10px;
             border-radius: 5px;
@@ -34,7 +34,11 @@
             flex-grow: 1;
         }
         .map-container {
-            margin-top: 300px; /* Adjust based on the height of the chart-container */
+            position: absolute;
+            top: 300px; /* Adjust this based on the height of your chart-container */
+            left: 0;
+            width: 100vw;
+            height: calc(100vh - 300px); /* Adjust height to fit the remaining space */
         }
     </style>
 </head>
@@ -48,7 +52,7 @@
     </div>
     <script>
         const width = window.innerWidth - 300; // Adjust width to account for the bar chart
-        const height = window.innerHeight - 150; // Adjust height to leave space for the chart
+        const height = window.innerHeight - 300; // Adjust height to fit the remaining space below the bar chart
         const radius = Math.min(width, height) / 2;
 
         const canvas = d3.select("#mapCanvas").attr("width", width).attr("height", height);
@@ -143,7 +147,7 @@
 
             const svg = d3.select('.bar-chart').append('svg')
                 .attr('width', 300)
-                .attr('height', height);
+                .attr('height', 300); // Adjust height based on the chart container height
 
             const x = d3.scaleLinear()
                 .domain([0, d3.max(data, d => d.mass)])
@@ -151,7 +155,7 @@
 
             const y = d3.scaleBand()
                 .domain(data.map(d => d.name))
-                .range([0, height])
+                .range([0, 300]) // Adjust range to fit within the chart height
                 .padding(0.1);
 
             // Add bars
@@ -165,10 +169,16 @@
                 .attr('height', y.bandwidth())
                 .attr('fill', '#69b3a2');
 
-            // Add y-axis
-            svg.append('g')
-                .attr('class', 'y-axis')
-                .call(d3.axisLeft(y));
+            // Add y-axis labels
+            svg.selectAll('.text')
+                .data(data)
+                .enter().append('text')
+                .attr('class', 'text')
+                .attr('x', d => x(d.mass) + 5) // Position text to the right of the bar
+                .attr('y', d => y(d.name) + y.bandwidth() / 2) // Center text vertically
+                .attr('dy', '.35em') // Vertical alignment
+                .text(d => d.name)
+                .attr('fill', '#000');
         }
 
         function rotateMap(longitudeDelta, latitudeDelta) {
@@ -210,4 +220,3 @@
     </script>
 </body>
 </html>
-
