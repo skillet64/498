@@ -121,7 +121,7 @@
             Promise.all([
                 d3.json('https://skillet64.github.io/498/land-50m.json'),
                 d3.json('https://skillet64.github.io/498/land-110m.json'),
-                d3.csv('https://skillet64.github.io/498/sheet 1-ml-Meteorite_Landings.csv')
+                d3.csv('https://skillet64.github.io/498/Sheet 1-ml-Meteorite_Landings.csv')
             ]).then(([land50, land110, csvData]) => {
                 console.log('Data loaded successfully');
                 landData = topojson.feature(land50, land50.objects.land);
