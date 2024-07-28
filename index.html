@@ -20,16 +20,41 @@
         }
         .chart-container {
             display: flex;
-            flex-direction: column;
+            align-items: flex-start;
             width: 100%;
             height: 300px; /* Height for the charts section */
             background: white;
             padding: 10px;
             box-sizing: border-box;
         }
+        .bar-chart-container {
+            width: 50%;
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box;
+        }
+        .stacked-bar-chart-container {
+            width: 50%;
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box;
+        }
         .bar-chart, .stacked-bar-chart {
             width: 100%;
             height: 50%; /* Adjust based on space needed for each chart */
+        }
+        .text-container {
+            width: 100%;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+        .text-left {
+            width: 20%; /* Adjust width as needed */
+            padding-right: 10px;
+        }
+        .text-right {
+            width: 20%; /* Adjust width as needed */
+            padding-left: 10px;
         }
         .map-container {
             width: 100vw;
@@ -47,8 +72,18 @@
 <body>
     <div class="tooltip"></div>
     <div class="chart-container">
-        <div class="bar-chart"></div>
-        <div class="stacked-bar-chart"></div>
+        <div class="text-left text-container">
+            <p>This is the text to the left of the bar chart. Add any relevant information or descriptions here.</p>
+        </div>
+        <div class="bar-chart-container">
+            <div class="bar-chart"></div>
+        </div>
+        <div class="stacked-bar-chart-container">
+            <div class="stacked-bar-chart"></div>
+            <div class="text-right text-container">
+                <p>This is the text to the right of the stacked bar chart. Add any relevant information or descriptions here.</p>
+            </div>
+        </div>
     </div>
     <div class="map-container">
         <canvas id="mapCanvas"></canvas>
@@ -142,7 +177,7 @@
                     return {
                         year: d[columns[0]], // First column header: "fell"
                         fell: +d[columns[1]], // Second column header: "Fell"
-                        found: +d[columns[2]], // Third column header: "Found"
+                        Found: +d[columns[2]], // Third column header: "Found"
                         total: +d[columns[3]] // Fourth column header: "Grand Total"
                     };
                 })
@@ -182,7 +217,7 @@
 
             const x = d3.scaleLinear()
                 .domain([0, d3.max(data, d => d.mass)])
-                .range([0, width]);
+                .range([0, width * 0.5]); // Adjust based on the bar chart width
 
             const y = d3.scaleBand()
                 .domain(data.map(d => d.name))
@@ -190,43 +225,29 @@
                 .padding(0.1);
 
             // Add bars
-            const bars = svg.selectAll('.bar')
+            svg.selectAll('.bar')
                 .data(data)
-                .enter().append('g')
-                .attr('class', 'bar');
-
-            bars.append('rect')
+                .enter().append('rect')
+                .attr('class', 'bar')
                 .attr('x', 0)
                 .attr('y', d => y(d.name))
                 .attr('width', d => x(d.mass))
                 .attr('height', y.bandwidth())
                 .attr('fill', '#69b3a2')
-                .on('mouseover', (event, d) => {
-                    tooltip.style("display", "block")
-                        .style("left", `${event.pageX + 5}px`)
-                        .style("top", `${event.pageY - 28}px`)
-                        .text(`Mass: ${d.mass} g`);
-                })
-                .on('mousemove', (event) => {
-                    tooltip.style("left", `${event.pageX + 5}px`)
-                        .style("top", `${event.pageY - 28}px`);
-                })
-                .on('mouseleave', () => {
-                    tooltip.style("display", "none");
-                });
+                .append('title')
+                .text(d => `${d.mass}`); // Tooltip text for the bars
 
             // Add y-axis
             const yAxis = d3.axisLeft(y)
-                .tickSize(0) // Remove axis line
-                .tickPadding(10); // Add padding for better readability
+                .tickSize(0); // Remove axis line
 
             svg.append('g')
                 .attr('class', 'y-axis')
                 .attr('transform', 'translate(0, 0)')
                 .call(yAxis)
-                .selectAll('.tick text')
-                .attr('x', -5)
-                .attr('dy', 4);
+                .selectAll('text')
+                .attr('x', -10) // Position text labels to the left of the axis
+                .style('text-anchor', 'end');
         }
 
         function drawStackedBarChart() {
@@ -248,7 +269,7 @@
 
             const x = d3.scaleBand()
                 .domain(data.map(d => d.year))
-                .range([0, width])
+                .range([0, width * 0.5])
                 .padding(0.1);
 
             const y = d3.scaleLinear()
