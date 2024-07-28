@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interactive Spherical Map with Heat Map and Bar Chart</title>
+    <title>Interactive Spherical Map with Heat Map and Horizontal Bar Chart</title>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/versor@0.2/dist/versor.min.js"></script>
     <script src="https://d3js.org/topojson.v3.min.js"></script>
@@ -22,29 +22,16 @@
             position: absolute;
             right: 0;
             top: 0;
-            height: 150px;
+            height: 100%;
             width: 300px;
             background: white;
             padding: 10px;
             border-radius: 5px;
+            overflow: auto;
         }
         .bar-chart {
             width: 100%;
             height: 100%;
-        }
-        .text-container {
-            position: absolute;
-            right: 310px; /* Ensure there's space between text and chart */
-            top: 0;
-            height: 150px;
-            padding: 10px;
-            background: white;
-            border-radius: 5px;
-            text-align: right;
-        }
-        .text-container p {
-            margin: 0;
-            font-weight: bold;
         }
     </style>
 </head>
@@ -53,12 +40,9 @@
     <div class="bar-chart-container">
         <div class="bar-chart"></div>
     </div>
-    <div class="text-container">
-        <p>Top 10 Meteorite Masses:</p>
-    </div>
     <script>
-        const width = window.innerWidth;
-        const height = window.innerHeight - 150; // Leave space for the bar chart
+        const width = window.innerWidth - 300; // Adjust width to account for the bar chart
+        const height = window.innerHeight - 150; // Adjust height to leave space for the chart
         const radius = Math.min(width, height) / 2;
 
         const canvas = d3.create("canvas").attr("width", width).attr("height", height);
@@ -71,8 +55,6 @@
         let landData, countryBorders, pinsData, largestData;
 
         function render() {
-            console.log('Rendering the map');
-
             context.clearRect(0, 0, width, height);
 
             // Draw the map sphere
@@ -99,8 +81,6 @@
         }
 
         function drawHeatMap() {
-            console.log('Drawing heat map');
-
             const heatCanvas = document.createElement("canvas");
             heatCanvas.width = width;
             heatCanvas.height = height;
@@ -133,19 +113,16 @@
         }
 
         function loadData() {
-            console.log('Loading data...');
             Promise.all([
                 d3.json('https://skillet64.github.io/498/land-50m.json'),
                 d3.json('https://skillet64.github.io/498/land-110m.json'),
                 d3.csv('Sheet%201-ml-Meteorite_Landings.csv'),
                 d3.csv('https://skillet64.github.io/498/biggest.csv')
             ]).then(([land50, land110, mlData, biggestData]) => {
-                console.log('Data loaded successfully');
                 landData = topojson.feature(land50, land50.objects.land);
                 countryBorders = topojson.feature(land110, land110.objects.land);
                 pinsData = mlData;
                 largestData = biggestData;
-                console.log(`Loaded ${pinsData.length} pins`);
                 render();
                 drawBarChart(); // Draw the bar chart after the map is rendered
             }).catch(error => {
@@ -154,9 +131,6 @@
         }
 
         function drawBarChart() {
-            console.log('Drawing bar chart');
-
-            // Parse the CSV data
             const data = largestData.map(d => ({
                 name: d.name,
                 mass: +d['mass (g) (Sum)']
@@ -164,42 +138,32 @@
 
             const svg = d3.select('.bar-chart').append('svg')
                 .attr('width', 300)
-                .attr('height', 150);
+                .attr('height', height);
 
-            const x = d3.scaleBand()
-                .domain(data.map(d => d.name))
-                .range([0, 300])
-                .padding(0.1);
-
-            const y = d3.scaleLinear()
+            const x = d3.scaleLinear()
                 .domain([0, d3.max(data, d => d.mass)])
-                .nice()
-                .range([150, 0]);
+                .range([0, 300]);
 
-            // Add a title
-            svg.append('text')
-                .attr('x', 150)
-                .attr('y', 20)
-                .attr('text-anchor', 'middle')
-                .attr('font-size', '14px')
-                .attr('font-weight', 'bold')
-                .text('Top 10 Meteorite Masses');
+            const y = d3.scaleBand()
+                .domain(data.map(d => d.name))
+                .range([0, height])
+                .padding(0.1);
 
             // Add bars
             svg.selectAll('.bar')
                 .data(data)
                 .enter().append('rect')
                 .attr('class', 'bar')
-                .attr('x', d => x(d.name))
-                .attr('y', d => y(d.mass))
-                .attr('width', x.bandwidth())
-                .attr('height', d => 150 - y(d.mass))
+                .attr('x', 0)
+                .attr('y', d => y(d.name))
+                .attr('width', d => x(d.mass))
+                .attr('height', y.bandwidth())
                 .attr('fill', '#69b3a2');
 
             // Add x-axis
             svg.append('g')
                 .attr('class', 'x-axis')
-                .attr('transform', `translate(0, ${150})`)
+                .attr('transform', `translate(0, ${height - 20})`)
                 .call(d3.axisBottom(x));
 
             // Add y-axis
@@ -213,7 +177,6 @@
             longitude = (longitude + longitudeDelta) % 360;
             latitude = Math.max(-90, Math.min(90, latitude + latitudeDelta)); // Constrain latitude between -90 and 90
             projection.rotate([longitude, latitude]);
-            console.log(`Rotating map to longitude: ${longitude}, latitude: ${latitude}`);
             render();
         }
 
