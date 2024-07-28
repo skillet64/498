@@ -3,220 +3,203 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interactive Spherical Map with Heat Map and Horizontal Bar Chart</title>
+    <title>Data Visualizations</title>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/versor@0.2/dist/versor.min.js"></script>
     <script src="https://d3js.org/topojson.v3.min.js"></script>
     <style>
-        body { margin: 0; }
-        .tooltip { 
-            position: absolute; 
-            background: rgba(0, 0, 0, 0.7); 
-            color: #fff; 
-            padding: 5px; 
-            border-radius: 3px; 
-            pointer-events: none; 
+        body { margin: 0; font-family: Arial, sans-serif; }
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 20px;
         }
-        .chart-container {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            width: 300px;
-            height: 500px; /* Increased height for more space */
-            background: white;
-            padding: 10px;
-            border-radius: 5px;
-            overflow: auto;
+        .chart {
+            margin-bottom: 20px;
         }
-        .bar-chart {
-            width: 100%;
-            height: 100%;
-        }
-        .map-container {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: calc(100vw - 320px); /* Adjust width to fit the remaining space */
-            height: calc(100vh - 10px); /* Adjust height to fit the remaining space below the bar chart */
-        }
+        .bar { fill: steelblue; }
+        .axis-label { font-weight: bold; }
+        .legend rect { fill: steelblue; }
+        svg { border: 1px solid #ccc; }
     </style>
 </head>
 <body>
-    <div class="tooltip" style="display: none;"></div>
-    <div class="chart-container">
-        <div class="bar-chart"></div>
+    <div class="container">
+        <!-- Stacked Bar Chart -->
+        <svg id="stackedBarChart" width="800" height="400"></svg>
+        <!-- Horizontal Bar Chart -->
+        <svg id="horizontalBarChart" width="800" height="400"></svg>
+        <!-- Globe -->
+        <svg id="globe" width="800" height="600"></svg>
     </div>
-    <div class="map-container">
-        <canvas id="mapCanvas"></canvas>
-    </div>
+
     <script>
-        const width = window.innerWidth - 320; // Adjust width to account for the bar chart
-        const height = window.innerHeight - 10; // Adjust height to fit the remaining space below the bar chart
-        const radius = Math.min(width, height) / 2;
+        // Stacked Bar Chart
+        const stackedBarSvg = d3.select("#stackedBarChart");
+        const stackedBarMargin = {top: 20, right: 20, bottom: 50, left: 70};
+        const stackedBarWidth = +stackedBarSvg.attr("width") - stackedBarMargin.left - stackedBarMargin.right;
+        const stackedBarHeight = +stackedBarSvg.attr("height") - stackedBarMargin.top - stackedBarMargin.bottom;
+        const stackedBarG = stackedBarSvg.append("g").attr("transform", `translate(${stackedBarMargin.left},${stackedBarMargin.top})`);
 
-        const canvas = d3.select("#mapCanvas").attr("width", width).attr("height", height);
-        const context = canvas.node().getContext("2d");
-
-        const projection = d3.geoOrthographic().translate([width / 2, height / 2]).scale(radius);
-        const path = d3.geoPath().projection(projection).context(context);
-
-        let landData, countryBorders, pinsData, largestData;
-
-        function render() {
-            context.clearRect(0, 0, width, height);
-
-            // Draw the map sphere
-            context.beginPath();
-            path({type: "Sphere"});
-            context.fillStyle = "#a0c4ff"; // Light blue for oceans
-            context.fill();
-
-            // Draw the land
-            context.beginPath();
-            path(landData);
-            context.fillStyle = "#4caf50"; // Green for land
-            context.fill();
-
-            // Draw country borders
-            context.beginPath();
-            path(countryBorders);
-            context.strokeStyle = "#333";
-            context.lineWidth = 1;
-            context.stroke();
-
-            // Draw heat map
-            drawHeatMap();
-        }
-
-        function drawHeatMap() {
-            const heatCanvas = document.createElement("canvas");
-            heatCanvas.width = width;
-            heatCanvas.height = height;
-            const heatContext = heatCanvas.getContext("2d");
-
-            const colorScale = d3.scaleSequential(d3.interpolateWarm).domain([0, 100]); // Adjust the domain as needed
-
-            // Use a simple density function for demo purposes
-            const density = {};
-            pinsData.forEach(d => {
-                const [x, y] = projection([+d.reclong, +d.reclat]);
-                if (x && y) {
-                    const key = `${Math.floor(x)},${Math.floor(y)}`;
-                    density[key] = (density[key] || 0) + 1;
+        d3.csv("ml-Meteorite_Landings Pivot-ml-Meteorite_Landings Pivot.csv", function(d, i, columns) {
+            if (i > 1) { // Skip the first two rows
+                for (let i = 0; i < columns.length; i++) {
+                    d[columns[i]] = +d[columns[i]] || 0;
                 }
-            });
-
-            Object.keys(density).forEach(key => {
-                const [x, y] = key.split(',').map(Number);
-                const value = density[key];
-                heatContext.beginPath();
-                heatContext.arc(x, y, 10, 0, 2 * Math.PI);
-                heatContext.fillStyle = colorScale(value);
-                heatContext.fill();
-            });
-
-            context.globalAlpha = 0.6; // Set the transparency for the heat map
-            context.drawImage(heatCanvas, 0, 0);
-            context.globalAlpha = 1; // Reset transparency
-        }
-
-        function loadData() {
-            Promise.all([
-                d3.json('https://skillet64.github.io/498/land-50m.json'),
-                d3.json('https://skillet64.github.io/498/land-110m.json'),
-                d3.csv('Sheet%201-ml-Meteorite_Landings.csv'),
-                d3.csv('https://skillet64.github.io/498/biggest.csv')
-            ]).then(([land50, land110, mlData, biggestData]) => {
-                landData = topojson.feature(land50, land50.objects.land);
-                countryBorders = topojson.feature(land110, land110.objects.land);
-                pinsData = mlData;
-                largestData = biggestData;
-                render();
-                drawBarChart(); // Draw the bar chart after the map is rendered
-            }).catch(error => {
-                console.error('Error loading data:', error);
-            });
-        }
-
-        function drawBarChart() {
-            const data = largestData.map(d => ({
-                name: d.name,
-                mass: +d['mass (g) (Sum)']
+                return d;
+            }
+        }).then(data => {
+            const parsedData = data.map(d => ({
+                year: d.Fell,
+                fell: +d.Fell || 0
             }));
 
-            const svg = d3.select('.bar-chart').append('svg')
-                .attr('width', 300)
-                .attr('height', 500); // Adjust height based on the chart container height
+            const x = d3.scaleLinear()
+                .domain([0, d3.max(parsedData, d => d.fell)])
+                .range([0, stackedBarWidth]);
+
+            const y = d3.scaleBand()
+                .domain(parsedData.map(d => d.year))
+                .rangeRound([0, stackedBarHeight])
+                .padding(0.1);
+
+            stackedBarG.append("g")
+                .selectAll("rect")
+                .data(parsedData)
+                .enter().append("rect")
+                .attr("x", 0)
+                .attr("y", d => y(d.year))
+                .attr("width", d => x(d.fell))
+                .attr("height", y.bandwidth())
+                .attr("fill", "steelblue");
+
+            stackedBarG.append("g")
+                .attr("class", "x-axis")
+                .attr("transform", `translate(0,${stackedBarHeight})`)
+                .call(d3.axisBottom(x).ticks(5).tickFormat(d3.format("~s")))
+                .append("text")
+                .attr("x", stackedBarWidth / 2)
+                .attr("y", 40)
+                .attr("text-anchor", "middle")
+                .style("font-weight", "bold")
+                .text("Number of Meteorites Found");
+
+            stackedBarG.append("g")
+                .attr("class", "y-axis")
+                .call(d3.axisLeft(y).tickSize(0))
+                .append("text")
+                .attr("x", -stackedBarMargin.left)
+                .attr("y", -10)
+                .attr("text-anchor", "start")
+                .style("font-weight", "bold")
+                .text("Year");
+        }).catch(error => {
+            console.error('Error loading CSV for stacked bar chart:', error);
+        });
+
+        // Horizontal Bar Chart
+        const horizontalBarSvg = d3.select("#horizontalBarChart");
+        const horizontalBarMargin = {top: 20, right: 20, bottom: 50, left: 70};
+        const horizontalBarWidth = +horizontalBarSvg.attr("width") - horizontalBarMargin.left - horizontalBarMargin.right;
+        const horizontalBarHeight = +horizontalBarSvg.attr("height") - horizontalBarMargin.top - horizontalBarMargin.bottom;
+        const horizontalBarG = horizontalBarSvg.append("g").attr("transform", `translate(${horizontalBarMargin.left},${horizontalBarMargin.top})`);
+
+        d3.csv("biggest.csv").then(data => {
+            data.forEach(d => {
+                d['mass (g) (Sum)'] = +d['mass (g) (Sum)'];
+            });
 
             const x = d3.scaleLinear()
-                .domain([0, d3.max(data, d => d.mass)])
-                .range([0, 280]); // Adjust width to fit within the chart
+                .domain([0, d3.max(data, d => d['mass (g) (Sum)'])])
+                .range([0, horizontalBarWidth]);
 
             const y = d3.scaleBand()
                 .domain(data.map(d => d.name))
-                .range([0, 480]) // Adjust range to fit within the chart height
+                .rangeRound([0, horizontalBarHeight])
                 .padding(0.1);
 
-            // Add bars
-            svg.selectAll('.bar')
+            horizontalBarG.append("g")
+                .selectAll("rect")
                 .data(data)
-                .enter().append('rect')
-                .attr('class', 'bar')
-                .attr('x', 0)
-                .attr('y', d => y(d.name))
-                .attr('width', d => x(d.mass))
-                .attr('height', y.bandwidth())
-                .attr('fill', '#69b3a2');
+                .enter().append("rect")
+                .attr("x", 0)
+                .attr("y", d => y(d.name))
+                .attr("width", d => x(d['mass (g) (Sum)']))
+                .attr("height", y.bandwidth())
+                .attr("fill", "steelblue");
 
-            // Add y-axis
-            const yAxis = d3.axisLeft(y)
-                .tickSize(0); // Remove axis line
+            horizontalBarG.append("g")
+                .attr("class", "x-axis")
+                .attr("transform", `translate(0,${horizontalBarHeight})`)
+                .call(d3.axisBottom(x).ticks(5).tickFormat(d3.format(".0s")))
+                .append("text")
+                .attr("x", horizontalBarWidth / 2)
+                .attr("y", 40)
+                .attr("text-anchor", "middle")
+                .style("font-weight", "bold")
+                .text("Mass (g)");
 
-            svg.append('g')
-                .attr('class', 'y-axis')
-                .attr('transform', 'translate(10, 10)') // Adjust position to fit within the chart area
-                .call(yAxis);
+            horizontalBarG.append("g")
+                .attr("class", "y-axis")
+                .call(d3.axisLeft(y))
+                .append("text")
+                .attr("x", -horizontalBarMargin.left)
+                .attr("y", -10)
+                .attr("text-anchor", "start")
+                .style("font-weight", "bold")
+                .text("Meteorite Name");
+        }).catch(error => {
+            console.error('Error loading CSV for horizontal bar chart:', error);
+        });
 
-            // Hide x-axis
-            svg.selectAll('.x-axis').remove();
-        }
+        // Globe
+        const globeSvg = d3.select("#globe");
+        const globeMargin = {top: 20, right: 20, bottom: 20, left: 20};
+        const globeWidth = +globeSvg.attr("width") - globeMargin.left - globeMargin.right;
+        const globeHeight = +globeSvg.attr("height") - globeMargin.top - globeMargin.bottom;
 
-        function rotateMap(longitudeDelta, latitudeDelta) {
-            let [longitude, latitude] = projection.rotate();
-            longitude = (longitude + longitudeDelta) % 360;
-            latitude = Math.max(-90, Math.min(90, latitude + latitudeDelta)); // Constrain latitude between -90 and 90
-            projection.rotate([longitude, latitude]);
-            render();
-        }
+        const projection = d3.geoOrthographic()
+            .translate([globeWidth / 2, globeHeight / 2])
+            .scale(globeWidth / 2)
+            .clipAngle(90);
 
-        loadData();
+        const path = d3.geoPath().projection(projection);
 
-        const tooltip = d3.select(".tooltip");
-        canvas.node().addEventListener("mousemove", (event) => {
-            const [x, y] = d3.pointer(event, canvas.node());
-            const [longitude, latitude] = projection.invert([x, y]);
-            let found = false;
-            pinsData.forEach(d => {
-                const [px, py] = projection([+d.reclong, +d.reclat]);
-                if (Math.hypot(px - x, py - y) < 5) {
-                    tooltip.style("display", "block")
-                        .style("left", `${event.pageX + 5}px`)
-                        .style("top", `${event.pageY - 28}px`)
-                        .text(d.name);
-                    found = true;
-                }
+        const globeG = globeSvg.append("g").attr("transform", `translate(${globeMargin.left},${globeMargin.top})`);
+
+        Promise.all([
+            d3.json("https://raw.githubusercontent.com/PublicaMundi/MappingAPI/master/data/geojson/countries.geojson"),
+            d3.json("https://skillet64.github.io/498/world-110m.json")
+        ]).then(([worldData, countriesData]) => {
+            const land = topojson.feature(worldData, worldData.objects.land);
+
+            globeG.append("path")
+                .datum(land)
+                .attr("class", "land")
+                .attr("d", path)
+                .attr("fill", "#ccc")
+                .attr("stroke", "#333")
+                .attr("stroke-width", 0.5);
+
+            globeG.append("path")
+                .datum(topojson.mesh(countriesData, countriesData.objects.countries, (a, b) => a !== b))
+                .attr("class", "boundary")
+                .attr("d", path)
+                .attr("fill", "none")
+                .attr("stroke", "#000")
+                .attr("stroke-width", 1);
+
+            d3.select(window).on("mousemove", function(event) {
+                const [x, y] = d3.pointer(event);
+                projection.rotate([x / globeWidth * 360 - 180, -y / globeHeight * 360 + 90]);
+                globeSvg.selectAll("path").attr("d", path);
             });
-            if (!found) tooltip.style("display", "none");
+
+        }).catch(error => {
+            console.error('Error loading GeoJSON for globe:', error);
         });
 
-        canvas.node().addEventListener("mouseleave", () => {
-            tooltip.style("display", "none");
-        });
-
-        d3.select("body").call(d3.drag().on("drag", function(event) {
-            const [dx, dy] = [event.dx, event.dy];
-            rotateMap(dx / 10, dy / 10);
-        }));
     </script>
 </body>
 </html>
