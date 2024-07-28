@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interactive Spherical Map with Heat Map</title>
+    <title>Interactive Spherical Map with Heat Map and Bar Chart</title>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/versor@0.2/dist/versor.min.js"></script>
     <script src="https://d3js.org/topojson.v3.min.js"></script>
@@ -18,31 +18,47 @@
             border-radius: 3px; 
             pointer-events: none; 
         }
-        .controls {
+        .bar-chart-container {
             position: absolute;
-            top: 10px;
-            left: 10px;
-            z-index: 10;
+            right: 0;
+            top: 0;
+            height: 150px;
+            width: 300px;
             background: white;
             padding: 10px;
             border-radius: 5px;
         }
-        .controls button {
-            margin: 5px;
+        .bar-chart {
+            width: 100%;
+            height: 100%;
+        }
+        .text-container {
+            position: absolute;
+            right: 310px; /* Ensure there's space between text and chart */
+            top: 0;
+            height: 150px;
+            padding: 10px;
+            background: white;
+            border-radius: 5px;
+            text-align: right;
+        }
+        .text-container p {
+            margin: 0;
+            font-weight: bold;
         }
     </style>
 </head>
 <body>
     <div class="tooltip" style="display: none;"></div>
-    <div class="controls">
-        <button onclick="rotateMap(-10, 0)">Rotate Left</button>
-        <button onclick="rotateMap(10, 0)">Rotate Right</button>
-        <button onclick="rotateMap(0, 10)">Rotate Down</button>
-        <button onclick="rotateMap(0, -10)">Rotate Up</button>
+    <div class="bar-chart-container">
+        <div class="bar-chart"></div>
+    </div>
+    <div class="text-container">
+        <p>Top 10 Meteorite Masses:</p>
     </div>
     <script>
         const width = window.innerWidth;
-        const height = window.innerHeight;
+        const height = window.innerHeight - 150; // Leave space for the bar chart
         const radius = Math.min(width, height) / 2;
 
         const canvas = d3.create("canvas").attr("width", width).attr("height", height);
@@ -52,7 +68,7 @@
         const projection = d3.geoOrthographic().translate([width / 2, height / 2]).scale(radius);
         const path = d3.geoPath().projection(projection).context(context);
 
-        let landData, countryBorders, pinsData;
+        let landData, countryBorders, pinsData, largestData;
 
         function render() {
             console.log('Rendering the map');
@@ -121,17 +137,75 @@
             Promise.all([
                 d3.json('https://skillet64.github.io/498/land-50m.json'),
                 d3.json('https://skillet64.github.io/498/land-110m.json'),
-                d3.csv('https://skillet64.github.io/498/Sheet 1-ml-Meteorite_Landings.csv')
-            ]).then(([land50, land110, csvData]) => {
+                d3.csv('Sheet%201-ml-Meteorite_Landings.csv'),
+                d3.csv('https://skillet64.github.io/498/biggest.csv')
+            ]).then(([land50, land110, mlData, biggestData]) => {
                 console.log('Data loaded successfully');
                 landData = topojson.feature(land50, land50.objects.land);
                 countryBorders = topojson.feature(land110, land110.objects.land);
-                pinsData = csvData;
+                pinsData = mlData;
+                largestData = biggestData;
                 console.log(`Loaded ${pinsData.length} pins`);
                 render();
+                drawBarChart(); // Draw the bar chart after the map is rendered
             }).catch(error => {
                 console.error('Error loading data:', error);
             });
+        }
+
+        function drawBarChart() {
+            console.log('Drawing bar chart');
+
+            // Parse the CSV data
+            const data = largestData.map(d => ({
+                name: d.name,
+                mass: +d['mass (g) (Sum)']
+            }));
+
+            const svg = d3.select('.bar-chart').append('svg')
+                .attr('width', 300)
+                .attr('height', 150);
+
+            const x = d3.scaleBand()
+                .domain(data.map(d => d.name))
+                .range([0, 300])
+                .padding(0.1);
+
+            const y = d3.scaleLinear()
+                .domain([0, d3.max(data, d => d.mass)])
+                .nice()
+                .range([150, 0]);
+
+            // Add a title
+            svg.append('text')
+                .attr('x', 150)
+                .attr('y', 20)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '14px')
+                .attr('font-weight', 'bold')
+                .text('Top 10 Meteorite Masses');
+
+            // Add bars
+            svg.selectAll('.bar')
+                .data(data)
+                .enter().append('rect')
+                .attr('class', 'bar')
+                .attr('x', d => x(d.name))
+                .attr('y', d => y(d.mass))
+                .attr('width', x.bandwidth())
+                .attr('height', d => 150 - y(d.mass))
+                .attr('fill', '#69b3a2');
+
+            // Add x-axis
+            svg.append('g')
+                .attr('class', 'x-axis')
+                .attr('transform', `translate(0, ${150})`)
+                .call(d3.axisBottom(x));
+
+            // Add y-axis
+            svg.append('g')
+                .attr('class', 'y-axis')
+                .call(d3.axisLeft(y));
         }
 
         function rotateMap(longitudeDelta, latitudeDelta) {
@@ -160,68 +234,18 @@
                     found = true;
                 }
             });
-            if (!found) {
-                tooltip.style("display", "none");
-            }
+            if (!found) tooltip.style("display", "none");
         });
 
         canvas.node().addEventListener("mouseleave", () => {
             tooltip.style("display", "none");
         });
 
-        function setupDrag() {
-            let v0, q0, r0, a0, l;
+        d3.select("body").call(d3.drag().on("drag", function(event) {
+            const [dx, dy] = [event.dx, event.dy];
+            rotateMap(dx / 10, dy / 10);
+        }));
 
-            function pointer(event, that) {
-                const t = d3.pointers(event, that);
-
-                if (t.length !== l) {
-                    l = t.length;
-                    if (l > 1) a0 = Math.atan2(t[1][1] - t[0][1], t[1][0] - t[0][0]);
-                    dragstarted.apply(that, [event, that]);
-                }
-
-                if (l > 1) {
-                    const x = d3.mean(t, p => p[0]);
-                    const y = d3.mean(t, p => p[1]);
-                    const a = Math.atan2(t[1][1] - t[0][1], t[1][0] - t[0][0]);
-                    return [x, y, a];
-                }
-
-                return t[0];
-            }
-
-            function dragstarted({x, y}) {
-                v0 = versor.cartesian(projection.invert([x, y]));
-                q0 = versor(r0 = projection.rotate());
-                console.log('Drag started');
-            }
-
-            function dragged(event) {
-                const v1 = versor.cartesian(projection.rotate(r0).invert([event.x, event.y]));
-                const delta = versor.delta(v0, v1);
-                let q1 = versor.multiply(q0, delta);
-
-                const p = pointer(event, this);
-                if (p[2]) {
-                    const d = (p[2] - a0) / 2;
-                    const s = -Math.sin(d);
-                    const c = Math.sign(Math.cos(d));
-                    q1 = versor.multiply([Math.sqrt(1 - s * s), 0, 0, c * s], q1);
-                }
-
-                projection.rotate(versor.rotation(q1));
-                console.log('Dragging - new projection rotation:', projection.rotate());
-
-                render();
-            }
-
-            return d3.drag()
-                .on("start", dragstarted)
-                .on("drag", dragged);
-        }
-
-        d3.select(canvas.node()).call(setupDrag());
     </script>
 </body>
 </html>
