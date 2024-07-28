@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Meteorite landins</title>
+    <title>Meteorite Landings</title>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/versor@0.2/dist/versor.min.js"></script>
     <script src="https://d3js.org/topojson.v3.min.js"></script>
@@ -127,9 +127,9 @@
             Promise.all([
                 d3.json('https://skillet64.github.io/498/land-50m.json'),
                 d3.json('https://skillet64.github.io/498/land-110m.json'),
-                d3.csv('https://skillet64.github.io/498/Sheet 1-ml-Meteoriste_Landings.csv'),
+                d3.csv('https://skillet64.github.io/498/Sheet%201-ml-Meteorite_Landings.csv'),
                 d3.csv('https://skillet64.github.io/498/biggest.csv'),
-                d3.csv('https://skillet64.github.io/498/ml-Meteorite_Landings Pivot-ml-Meteorite_Landings Pivot.csv') // Replace with actual path
+                d3.csv('https://skillet64.github.io/498/ml-Meteorite_Landings%20Pivot-ml-Meteorite_Landings%20Pivot.csv')
             ]).then(([land50, land110, mlData, biggestData, fellFoundData]) => {
                 landData = topojson.feature(land50, land50.objects.land);
                 countryBorders = topojson.feature(land110, land110.objects.land);
