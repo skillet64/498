@@ -53,6 +53,15 @@
             stroke: #555; /* Nebula Gray */
             stroke-width: 1px;
         }
+        .scroll-container {
+            overflow-x: scroll;
+            -webkit-overflow-scrolling: touch;
+            white-space: nowrap;
+            margin-bottom: 20px;
+        }
+        .chart-svg {
+            display: inline-block;
+        }
     </style>
 </head>
 <body>
@@ -65,7 +74,9 @@
                 This remarkable meteorite offers a unique opportunity to study an extraterrestrial object in its natural setting.
             </p>
         </div>
-        <svg id="chart1" width="800" height="600"></svg>
+        <div class="scroll-container" id="horizontal-chart-container">
+            <!-- Horizontal bar chart will be appended here -->
+        </div>
     </div>
     <div class="container">
         <div class="text-content">
@@ -78,7 +89,9 @@
                 This combination of environmental and technological changes has greatly enhanced our ability to discover and study meteorites. 
             </p>
         </div>
-        <svg id="chart2" width="800" height="600"></svg>
+        <div class="scroll-container" id="stacked-chart-container">
+            <!-- Stacked bar chart will be appended here -->
+        </div>
     </div>
     <div class="tooltip"></div>
     <script>
@@ -86,38 +99,25 @@
         const margin = { top: 20, right: 20, bottom: 100, left: 150 },
               width = 800 - margin.left - margin.right,
               height = 600 - margin.top - margin.bottom;
+        const totalWidth = width * 6;
 
         // Create SVG containers
-        const svg1 = d3.select("#chart1")
-            .attr("width", width + margin.left + margin.right)
-            .attr("height", height + margin.top + margin.bottom)
-          .append("g")
-            .attr("transform", `translate(${margin.left},${margin.top})`);
+        const horizontalContainer = d3.select("#horizontal-chart-container");
+        const stackedContainer = d3.select("#stacked-chart-container");
 
-        const svg2 = d3.select("#chart2")
-            .attr("width", width + margin.left + margin.right)
-            .attr("height", height + margin.top + margin.bottom)
-          .append("g")
-            .attr("transform", `translate(${margin.left},${margin.top})`);
+        // Create a tooltip
+        const tooltip = d3.select(".tooltip");
 
-        // Load data
+        // Load and process data
         Promise.all([
             d3.csv('https://skillet64.github.io/498/biggest.csv'),
-            d3.csv('https://skillet64.github.io/498/Sheet 1-ml-Meteorite_Landings.csv'),
             d3.csv('https://skillet64.github.io/498/ml-Meteorite_Landings Pivot-ml-Meteorite_Landings Pivot.csv')
-        ]).then(([biggestData, landingsData, pivotData]) => {
+        ]).then(([biggestData, pivotData]) => {
 
             // Process the data for the horizontal bar chart
             biggestData.forEach(d => {
                 d.mass = +d['mass (g) (Sum)'];
             });
-
-            landingsData.forEach(d => {
-                d.reclat = +d.reclat;
-                d.reclong = +d.reclong;
-            });
-
-            const landingMap = new Map(landingsData.map(d => [d.name, d]));
             biggestData.sort((a, b) => b.mass - a.mass);
 
             const x1 = d3.scaleLinear()
@@ -129,9 +129,14 @@
                 .range([0, height])
                 .padding(0.1);
 
-            const tooltip = d3.select(".tooltip");
+            const horizontalSvg = horizontalContainer.append("svg")
+                .attr("width", totalWidth)
+                .attr("height", height)
+                .attr("class", "chart-svg");
 
-            svg1.selectAll(".bar")
+            horizontalSvg.append("g")
+                .attr("transform", `translate(${margin.left},${margin.top})`)
+                .selectAll(".bar")
                 .data(biggestData)
                 .enter().append("rect")
                 .attr("class", "bar")
@@ -141,10 +146,9 @@
                 .attr("height", y1.bandwidth())
                 .style("fill", "#fff") // Set color to white for horizontal bars
                 .on("mouseover", function(event, d) {
-                    const landing = landingMap.get(d.name);
                     tooltip
                         .style("display", "block")
-                        .html(`Name: ${d.name}<br>Mass: ${d.mass} g<br>Year: ${landing ? landing.year : 'N/A'}<br>Lat: ${landing ? landing.reclat : 'N/A'}<br>Long: ${landing ? landing.reclong : 'N/A'}`);
+                        .html(`Name: ${d.name}<br>Mass: ${d.mass} g`);
                 })
                 .on("mousemove", function(event) {
                     tooltip
@@ -155,9 +159,20 @@
                     tooltip.style("display", "none");
                 });
 
-            // Add Y axis to the horizontal bar chart
-            svg1.append("g")
-                .attr("class", "y-axis")
+            // Add X and Y axes to the horizontal bar chart
+            horizontalSvg.append("g")
+                .attr("transform", `translate(${margin.left},${height + margin.top})`)
+                .call(d3.axisBottom(x1).ticks(10, ",.0f"))
+                .append("text")
+                .attr("class", "x-label")
+                .attr("x", totalWidth)
+                .attr("y", margin.bottom - 10)
+                .attr("fill", "#fff") // Set color to white for axis label
+                .attr("text-anchor", "end")
+                .text("Mass (g)");
+
+            horizontalSvg.append("g")
+                .attr("transform", `translate(${margin.left},${margin.top})`)
                 .call(d3.axisLeft(y1).tickSize(0))
                 .append("text")
                 .attr("class", "y-label")
@@ -168,7 +183,8 @@
                 .text("Meteorite Name");
 
             // Add grid lines to the horizontal bar chart
-            svg1.append("g")
+            horizontalSvg.append("g")
+                .attr("transform", `translate(${margin.left},${margin.top})`)
                 .attr("class", "grid")
                 .call(d3.axisBottom(x1)
                     .ticks(10)
@@ -199,42 +215,55 @@
                 .domain(['Fell', 'Found'])
                 .range(['#ff4d4d', '#00bfae']); // Red for Fell, Teal for Found
 
-            svg2.selectAll(".bar")
+            const stackedSvg = stackedContainer.append("svg")
+                .attr("width", totalWidth)
+                .attr("height", height)
+                .attr("class", "chart-svg");
+
+            const barGroups = stackedSvg.selectAll(".bar-group")
                 .data(pivotData)
                 .enter().append("g")
-                .attr("class", "bar-group")
-                .attr("fill", d => color(d.key))
-              .selectAll("rect")
+                .attr("class", "bar-group");
+
+            barGroups.selectAll("rect")
                 .data(d => [
                     { key: 'Fell', value: d.Fell },
                     { key: 'Found', value: d.Found }
                 ])
                 .enter().append("rect")
-                .attr("x", d => x2(d.key === 'Fell' ? d.key : 'Found'))
+                .attr("x", d => x2(d.key))
                 .attr("y", d => y2(d.value))
                 .attr("width", x2.bandwidth())
                 .attr("height", d => height - y2(d.value))
-                .attr("class", d => `bar-${d.key.toLowerCase()}`);
+                .attr("class", d => `bar-${d.key.toLowerCase()}`)
+                .style("fill", d => color(d.key))
+                .on("mouseover", function(event, d) {
+                    tooltip
+                        .style("display", "block")
+                        .html(`Type: ${d.key}<br>Number: ${d.value}`);
+                })
+                .on("mousemove", function(event) {
+                    tooltip
+                        .style("top", (event.pageY + 5) + "px")
+                        .style("left", (event.pageX + 5) + "px");
+                })
+                .on("mouseout", function() {
+                    tooltip.style("display", "none");
+                });
 
-            // Add X and Y axis to the stacked bar chart
-            const xAxis2 = d3.axisBottom(x2)
-                .tickValues(years.filter((_, i) => i % 2 === 0)) // Show every other tick
-                .tickFormat(d => d); // Format ticks as needed
-
-            svg2.append("g")
-                .attr("class", "x-axis")
+            // Add X and Y axes to the stacked bar chart
+            stackedSvg.append("g")
                 .attr("transform", `translate(0,${height})`)
-                .call(xAxis2)
+                .call(d3.axisBottom(x2).ticks(d3.utcMonth.every(1200 / width)).tickSizeOuter(0))
                 .append("text")
                 .attr("class", "x-label")
-                .attr("x", width)
+                .attr("x", totalWidth)
                 .attr("y", margin.bottom - 10)
                 .attr("fill", "#fff") // Set color to white for axis label
                 .attr("text-anchor", "end")
                 .text("Year Found");
 
-            svg2.append("g")
-                .attr("class", "y-axis")
+            stackedSvg.append("g")
                 .call(d3.axisLeft(y2).ticks(10, ",.0f"))
                 .append("text")
                 .attr("class", "y-label")
@@ -245,13 +274,17 @@
                 .text("Number of Meteorites");
 
             // Add grid lines to the stacked bar chart
-            svg2.append("g")
+            stackedSvg.append("g")
                 .attr("class", "grid")
                 .call(d3.axisLeft(y2)
                     .ticks(10)
-                    .tickSize(-width)
+                    .tickSize(-totalWidth)
                     .tickFormat('')
                 );
+
+            // Initialize the scroll offset after appending the chart to the DOM
+            horizontalContainer.node().scrollBy(totalWidth, 0);
+            stackedContainer.node().scrollBy(totalWidth, 0);
         });
     </script>
 </body>
