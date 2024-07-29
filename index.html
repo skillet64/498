@@ -19,38 +19,22 @@
             display: none; 
         }
         .chart-container {
+            width: 100%;
             display: flex;
             flex-direction: column;
-            align-items: stretch;
-            width: 100%;
+            align-items: center;
         }
-        .chart-section {
-            display: flex;
-            align-items: flex-start;
+        .chart-row {
             width: 100%;
-            padding: 10px;
-            box-sizing: border-box;
+            display: flex;
+            justify-content: center;
+            margin: 10px 0;
         }
         .chart {
-            flex: 1;
-            padding: 10px;
-            box-sizing: border-box;
-        }
-        .bar-chart-container, .stacked-bar-chart-container {
-            display: flex;
-            align-items: flex-start;
-            width: 100%;
-            padding: 10px;
-            box-sizing: border-box;
-        }
-        .bar-chart {
-            height: 300px; /* Adjust height as needed */
-        }
-        .stacked-bar-chart {
-            height: 0px; /* Adjust height as needed */
+            margin: 0 10px;
         }
         .text-container {
-            width: 20%; /* Adjust width as needed */
+            width: 20%;
             padding: 10px;
             box-sizing: border-box;
         }
@@ -59,6 +43,22 @@
         }
         .text-right {
             text-align: right;
+        }
+        .bar-chart-container,
+        .stacked-bar-chart-container {
+            display: flex;
+            align-items: center;
+            width: 100%;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+        .bar-chart {
+            height: 300px;
+            width: 50%;
+        }
+        .stacked-bar-chart {
+            height: 300px;
+            width: 50%;
         }
         .map-container {
             width: 100%;
@@ -74,23 +74,31 @@
 <body>
     <div class="tooltip"></div>
     <div class="chart-container">
-        <div class="chart-section bar-chart-container">
+        <!-- Row for the Bar Chart and its left-side text -->
+        <div class="chart-row">
             <div class="text-container text-left">
-                <h2>THE TEN HEAVIEST METEORITES EVER RECORDED</h2>
-                <p>Acording to National Geographic, The largest meteorite found on Earth is the Hoba meteorite discovered in Namibia in 1920. The Hoba meteorite weighs roughly 54,000 kilograms (119,000 pounds). The Hoba meteorite is so big, and so heavy, it has never been moved from where it was found!</p>
+                <p>This is the text to the left of the bar chart. Add any relevant information or descriptions here.</p>
             </div>
-            <div class="chart bar-chart"></div>
+            <div class="chart bar-chart-container">
+                <div class="bar-chart"></div>
+            </div>
         </div>
-        <div class="chart-section stacked-bar-chart-container">
-            <div class="chart stacked-bar-chart"></div>
+
+        <!-- Row for the Stacked Bar Chart and its right-side text -->
+        <div class="chart-row">
+            <div class="chart stacked-bar-chart-container">
+                <div class="stacked-bar-chart"></div>
+            </div>
             <div class="text-container text-right">
                 <p>This is the text to the right of the stacked bar chart. Add any relevant information or descriptions here.</p>
             </div>
         </div>
     </div>
+
     <div class="map-container">
         <canvas id="mapCanvas"></canvas>
     </div>
+    
     <script>
         const chartContainerHeight = 600; // Combined height for the charts section
         const width = window.innerWidth;
