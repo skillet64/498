@@ -3,19 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Meteorites</title>
+    <title>Horizontal Bar Chart with Tooltip</title>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <style>
         body {
             margin: 0;
-            display: flex;
-            align-items: flex-start;
             font-family: Arial, sans-serif;
         }
         .container {
             display: flex;
             align-items: flex-start;
-            margin: 20px;
+            padding: 20px;
+            box-sizing: border-box;
         }
         .text-content {
             width: 300px; /* Adjust width as needed */
@@ -30,6 +29,9 @@
             pointer-events: none;
             display: none;
         }
+        svg {
+            border: 1px solid #ccc; /* Optional: adds a border around the SVG */
+        }
         .bar {
             fill: steelblue;
         }
@@ -42,20 +44,20 @@
 <body>
     <div class="container">
         <div class="text-content">
-            <h2>The Heaviest Meteorites Ever Recorded</h2>
+           <h2>The Heaviest Meteorites Ever Recorded</h2>
                 <p>According to National Geographic, the largest meteorite ever discovered on Earth is the Hoba meteorite, found in Namibia in 1920. 
                     Weighing approximately 54,000 kilograms (119,000 pounds), the Hoba meteorite is so massive that it remains in its original location. 
                     Its enormous size and weight make it impossible to move, and it has been preserved exactly where it was discovered. 
                     This remarkable meteorite offers a unique opportunity to study an extraterrestrial object in its natural setting.
                 </p>
         </div>
-        <svg width="960" height="600"></svg>
+        <svg width="800" height="600"></svg>
     </div>
     <div class="tooltip"></div>
     <script>
         // Define dimensions and margins
         const margin = { top: 20, right: 20, bottom: 30, left: 150 },
-              width = 960 - margin.left - margin.right,
+              width = 800 - margin.left - margin.right,
               height = 600 - margin.top - margin.bottom;
 
         // Create SVG container
@@ -83,6 +85,9 @@
 
             // Create a map of IDs to their corresponding landing data
             const landingMap = new Map(landingsData.map(d => [d.name, d]));
+
+            // Sort data in descending order by mass
+            biggestData.sort((a, b) => b.mass - a.mass);
 
             // Define scales
             const x = d3.scaleLinear()
@@ -138,3 +143,4 @@
     </script>
 </body>
 </html>
+
