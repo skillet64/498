@@ -117,6 +117,13 @@
         const height = window.innerHeight - chartContainerHeight; // Height for the map
         const radius = Math.min(width, height) / 2.2; // Adjust scale for the globe
 
+        const colorPalette = {
+            fell: '#e41a1c', // Red
+            Found: '#377eb8', // Blue
+            total: '#4daf4a', // Green
+            meteoriteText: '#000' // Black for text
+        };
+
         const canvas = d3.select("#mapCanvas")
             .attr("width", width)
             .attr("height", height);
@@ -231,12 +238,15 @@
         function drawBarChart() {
             const data = largestData.map(d => ({
                 name: d.name,
-                mass: +d['mass (g) (Sum)']
+                mass: +d['mass (g) (Sum)'],
+                year: d.year,
+                lat: d.reclat,
+                long: d.reclong
             }));
 
             const svg = d3.select('.bar-chart').append('svg')
                 .attr('width', '100%')
-                .attr('height', '100%'); // Adjust height based on the chart container height
+                .attr('height', '100%');
 
             const x = d3.scaleLinear()
                 .domain([0, d3.max(data, d => d.mass)])
@@ -247,8 +257,7 @@
                 .range([0, d3.select('.bar-chart').node().getBoundingClientRect().height])
                 .padding(0.1);
 
-            // Add bars
-            svg.selectAll('.bar')
+            const bars = svg.selectAll('.bar')
                 .data(data)
                 .enter().append('rect')
                 .attr('class', 'bar')
@@ -256,20 +265,48 @@
                 .attr('y', d => y(d.name))
                 .attr('width', d => x(d.mass))
                 .attr('height', y.bandwidth())
+                .style('fill', colorPalette.fell)
                 .append('title')
-                .text(d => `${d.mass} grams`); // Tooltip text for the bars
+                .text(d => `${d.mass} grams`);
 
-            // Add y-axis
+            svg.selectAll('.bar-text')
+                .data(data)
+                .enter().append('text')
+                .attr('class', 'bar-text')
+                .attr('x', d => x(d.mass) - 10)
+                .attr('y', d => y(d.name) + y.bandwidth() / 2)
+                .attr('dy', '.35em')
+                .attr('text-anchor', 'end')
+                .style('fill', colorPalette.meteoriteText)
+                .text(d => d.name);
+
             const yAxis = d3.axisLeft(y)
-                .tickSize(0); // Remove axis line
+                .tickSize(0);
 
             svg.append('g')
                 .attr('class', 'y-axis')
                 .attr('transform', 'translate(0, 0)')
                 .call(yAxis)
                 .selectAll('text')
-                .attr('x', -10) // Position text labels to the left of the axis
+                .attr('x', -10)
                 .style('text-anchor', 'end');
+
+            const tooltip = d3.select('.tooltip');
+
+            bars.on('mouseover', function(event, d) {
+                d3.select(this).style('fill', d3.rgb(colorPalette.fell).darker());
+                tooltip.style('display', 'block')
+                    .style('left', `${event.pageX + 5}px`)
+                    .style('top', `${event.pageY - 28}px`)
+                    .html(`Name: ${d.name}<br>Mass: ${d.mass} grams<br>Year: ${d.year}<br>Latitude: ${d.lat}<br>Longitude: ${d.long}`);
+            }).on('mouseout', function() {
+                d3.select(this).style('fill', colorPalette.fell);
+                tooltip.style('display', 'none');
+            }).on('click', function(event, d) {
+                const [x, y] = projection([+d.long, +d.lat]);
+                const rotateDelta = [width / 2 - x, height / 2 - y];
+                rotateMap(rotateDelta[0] / 10, rotateDelta[1] / 10);
+            });
         }
 
         function drawStackedBarChart() {
@@ -287,7 +324,7 @@
 
             const svg = d3.select('.stacked-bar-chart').append('svg')
                 .attr('width', '100%')
-                .attr('height', '100%'); // Adjust height based on the chart container height
+                .attr('height', '100%');
 
             const x = d3.scaleBand()
                 .domain(data.map(d => d.year))
@@ -297,11 +334,11 @@
             const y = d3.scaleLinear()
                 .domain([0, d3.max(data, d => d.fell + d.Found + d.total)])
                 .nice()
-                .range([d3.select('.stacked-bar-chart').node().getBoundingClientRect().height, 0]); // Adjust range to fit within the chart height
+                .range([d3.select('.stacked-bar-chart').node().getBoundingClientRect().height, 0]);
 
             const colors = d3.scaleOrdinal()
                 .domain(['fell', 'Found', 'total'])
-                .range(['#e41a1c', '#377eb8', '#4daf4a']); // Colors for different segments
+                .range([colorPalette.fell, colorPalette.Found, colorPalette.total]);
 
             const series = stack(data);
 
@@ -335,40 +372,12 @@
         function rotateMap(longitudeDelta, latitudeDelta) {
             let [longitude, latitude] = projection.rotate();
             longitude = (longitude + longitudeDelta) % 360;
-            latitude = Math.max(-90, Math.min(90, latitude + latitudeDelta)); // Constrain latitude between -90 and 90
+            latitude = Math.max(-90, Math.min(90, latitude + latitudeDelta));
             projection.rotate([longitude, latitude]);
             render();
         }
 
-        loadData(); // Load and render all data
-
-        const tooltip = d3.select(".tooltip");
-
-        canvas.node().addEventListener("mousemove", (event) => {
-            const [x, y] = d3.pointer(event, canvas.node());
-            const [longitude, latitude] = projection.invert([x, y]);
-            let found = false;
-            pinsData.forEach(d => {
-                const [px, py] = projection([+d.reclong, +d.reclat]);
-                if (Math.hypot(px - x, py - y) < 5) {
-                    tooltip.style("display", "block")
-                        .style("left", `${event.pageX + 5}px`)
-                        .style("top", `${event.pageY - 28}px`)
-                        .text(d.name);
-                    found = true;
-                }
-            });
-            if (!found) tooltip.style("display", "none");
-        });
-
-        canvas.node().addEventListener("mouseleave", () => {
-            tooltip.style("display", "none");
-        });
-
-        d3.select("body").call(d3.drag().on("drag", function(event) {
-            const [dx, dy] = [event.dx, event.dy];
-            rotateMap(dx / 10, dy / 10);
-        }));
+        loadData();
     </script>
 </body>
 </html>
