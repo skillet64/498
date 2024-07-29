@@ -195,16 +195,15 @@
             Promise.all([
                 d3.json('https://skillet64.github.io/498/land-50m.json'),
                 d3.json('https://skillet64.github.io/498/land-110m.json'),
-                d3.csv('https://skillet64.github.io/498/Sheet%201-ml-Meteorite_Landings.csv'),
+                d3.csv('https://skillet64.github.io/498/Sheet 1-ml-Meteorite_Landings.csv'),
                 d3.csv('https://skillet64.github.io/498/biggest.csv'),
-                d3.csv('https://skillet64.github.io/498/ml-Meteorite_Landings%20Pivot-ml-Meteorite_Landings%20Pivot.csv', function(d, i, columns) {
-                    if (i < 2) return; // Skip the first two rows
-                    return {
+                d3.csv('https://skillet64.github.io/498/ml-Meteorite_Landings Pivot-ml-Meteorite_Landings Pivot.csv', function(d, i, columns) {
+                    
                         year: d[columns[0]], // First column header: "fell"
                         Fell: +d[columns[1]], // Second column header: "Fell"
                         Found: +d[columns[2]], // Third column header: "Found"
                         total: +d[columns[3]] // Fourth column header: "Grand Total"
-                    };
+                    
                 })
             ]).then(([land50, land110, mlData, biggestData, fellFoundData]) => {
                 console.log('Data loaded successfully');
@@ -224,7 +223,7 @@
 
                 // Draw the globe
                 render();
-                drawBarChart(); // Draw the horizontal bar chart
+                drawBarChart(); // Draw the bar chart
                 drawStackedBarChart(); // Draw the stacked bar chart
             }).catch(error => {
                 console.error('Error loading data:', error);
@@ -281,6 +280,18 @@
                     projection.rotate([longitude, latitude]);
                     render();
                 });
+
+            // Add labels inside the bars
+            svg.selectAll('.bar-label')
+                .data(data)
+                .enter().append('text')
+                .attr('class', 'bar-label')
+                .attr('x', d => x(d.mass) - 5) // Position the label slightly inside the bar
+                .attr('y', d => y(d.name) + y.bandwidth() / 2)
+                .attr('text-anchor', 'end')
+                .attr('alignment-baseline', 'middle')
+                .style('fill', '#fff') // White color for contrast
+                .text(d => d.name);
 
             // Add y-axis
             const yAxis = d3.axisLeft(y)
@@ -411,3 +422,4 @@
     </script>
 </body>
 </html>
+
