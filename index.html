@@ -35,16 +35,12 @@
         .bar {
             fill: steelblue;
         }
-        .x-axis path,
-        .x-axis line {
-            display: none;
-        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="text-content">
-           <h2>The Heaviest Meteorites Ever Recorded</h2>
+             <h2>The Heaviest Meteorites Ever Recorded</h2>
                 <p>According to National Geographic, the largest meteorite ever discovered on Earth is the Hoba meteorite, found in Namibia in 1920. 
                     Weighing approximately 54,000 kilograms (119,000 pounds), the Hoba meteorite is so massive that it remains in its original location. 
                     Its enormous size and weight make it impossible to move, and it has been preserved exactly where it was discovered. 
@@ -96,7 +92,7 @@
 
             const y = d3.scaleBand()
                 .domain(biggestData.map(d => d.name))
-                .range([height, 0])
+                .range([0, height])
                 .padding(0.1);
 
             // Create tooltip
@@ -126,16 +122,8 @@
                     tooltip.style("display", "none");
                 });
 
-            // Add X axis
-            svg.append("g")
-                .attr("class", "x-axis")
-                .attr("transform", `translate(0,${height})`)
-                .call(d3.axisBottom(x));
-
-            // Add Y axis
-            svg.append("g")
-                .attr("class", "y-axis")
-                .call(d3.axisLeft(y));
+            // Remove X and Y axis (No axis)
+            svg.selectAll(".axis").remove();
 
         }).catch(error => {
             console.error('Error loading data:', error);
@@ -143,4 +131,3 @@
     </script>
 </body>
 </html>
-
