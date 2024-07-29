@@ -30,22 +30,28 @@
             display: none;
         }
         svg {
-            border: 1px solid #ccc; /* Optional: adds a border around the SVG */
+            /* Remove border around SVG */
         }
         .bar {
             fill: steelblue;
+        }
+        .label {
+            font-size: 12px;
+            text-anchor: end;
+            alignment-baseline: middle;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="text-content">
-             <h2>The Heaviest Meteorites Ever Recorded</h2>
+            <h2>The Heaviest Meteorites Ever Recorded</h2>
                 <p>According to National Geographic, the largest meteorite ever discovered on Earth is the Hoba meteorite, found in Namibia in 1920. 
                     Weighing approximately 54,000 kilograms (119,000 pounds), the Hoba meteorite is so massive that it remains in its original location. 
                     Its enormous size and weight make it impossible to move, and it has been preserved exactly where it was discovered. 
                     This remarkable meteorite offers a unique opportunity to study an extraterrestrial object in its natural setting.
                 </p>
+
         </div>
         <svg width="800" height="600"></svg>
     </div>
@@ -122,8 +128,16 @@
                     tooltip.style("display", "none");
                 });
 
-            // Remove X and Y axis (No axis)
-            svg.selectAll(".axis").remove();
+            // Add labels to the left of the bars
+            svg.selectAll(".label")
+                .data(biggestData)
+                .enter().append("text")
+                .attr("class", "label")
+                .attr("x", -10) // Adjust this value to position the label
+                .attr("y", d => y(d.name) + y.bandwidth() / 2)
+                .attr("dy", ".35em")
+                .text(d => d.name)
+                .attr("text-anchor", "end");
 
         }).catch(error => {
             console.error('Error loading data:', error);
@@ -131,3 +145,4 @@
     </script>
 </body>
 </html>
+
