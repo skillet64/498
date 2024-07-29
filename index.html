@@ -109,6 +109,10 @@
             d3.csv('https://skillet64.github.io/498/biggest.csv'),
             d3.csv('https://skillet64.github.io/498/ml-Meteorite_Landings Pivot-ml-Meteorite_Landings Pivot.csv')
         ]).then(([biggestData, pivotData]) => {
+            
+            // Log the raw data for debugging
+            console.log("Biggest Data:", biggestData);
+            console.log("Pivot Data:", pivotData);
 
             // Process the data for the horizontal bar chart
             biggestData.forEach(d => {
@@ -181,9 +185,12 @@
             pivotData.forEach(d => {
                 d.Fell = +d.Fell || 0; // Number of meteorites that fell each year
                 d.Found = +d.Found || 0; // Number of meteorites found each year
-                d.year = d.fell || 'Unknown'; // Ensure there is a fell field
+                d.year = d.year || 'Unknown'; // Ensure there is a year field
                 d['Grand Total'] = d.Fell + d.Found; // Total number of meteorites for each year
             });
+
+            // Log processed data for debugging
+            console.log("Processed Pivot Data:", pivotData);
 
             const years = Array.from(new Set(pivotData.map(d => d.year).filter(year => year !== 'Unknown')));
 
@@ -206,10 +213,12 @@
                 .attr("height", height + margin.top + margin.bottom)
                 .attr("class", "chart-svg");
 
-            // Ensure proper data transformation for stacked bars
             const stackedData = d3.stack()
                 .keys(['Fell', 'Found'])
                 (pivotData);
+
+            // Log stacked data for debugging
+            console.log("Stacked Data:", stackedData);
 
             stackedSvg.append("g")
                 .attr("transform", `translate(${margin.left},${margin.top})`)
@@ -275,4 +284,3 @@
     </script>
 </body>
 </html>
-
