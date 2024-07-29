@@ -155,19 +155,7 @@
                     tooltip.style("display", "none");
                 });
 
-            // Add X and Y axis to the horizontal bar chart
-            svg1.append("g")
-                .attr("class", "x-axis")
-                .attr("transform", `translate(0,${height})`)
-                .call(d3.axisBottom(x1).ticks(10, ",.0f"))
-                .append("text")
-                .attr("class", "x-label")
-                .attr("x", width)
-                .attr("y", margin.bottom - 10)
-                .attr("fill", "#fff") // Set color to white for axis label
-                .attr("text-anchor", "end")
-                .text("Mass (g)");
-
+            // Add Y axis to the horizontal bar chart
             svg1.append("g")
                 .attr("class", "y-axis")
                 .call(d3.axisLeft(y1).tickSize(0))
@@ -229,10 +217,14 @@
                 .attr("class", d => `bar-${d.key.toLowerCase()}`);
 
             // Add X and Y axis to the stacked bar chart
+            const xAxis2 = d3.axisBottom(x2)
+                .tickValues(years.filter((_, i) => i % 2 === 0)) // Show every other tick
+                .tickFormat(d => d); // Format ticks as needed
+
             svg2.append("g")
                 .attr("class", "x-axis")
                 .attr("transform", `translate(0,${height})`)
-                .call(d3.axisBottom(x2))
+                .call(xAxis2)
                 .append("text")
                 .attr("class", "x-label")
                 .attr("x", width)
