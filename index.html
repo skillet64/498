@@ -194,12 +194,13 @@
 
             // Process the data for the stacked bar chart
             pivotData.forEach(d => {
-                d.Fell = +d.Fell || 0;
-                d.Found = +d.Found || 0;
-                d['Grand Total'] = +d['Grand Total'] || 0;
+                d.Fell = +d.Fell || 0; // Number of meteorites that fell each year
+                d.Found = +d.Found || 0; // Number of meteorites found each year
+                d.year = d.fell || 'Unknown'; // Ensure there is a fell field
+                d['Grand Total'] = d.Fell + d.Found; // Total number of meteorites for each year
             });
 
-            const years = pivotData.map(d => d['year']).filter(year => year); // Replace 'year' with actual year column name
+            const years = Array.from(new Set(pivotData.map(d => d.year).filter(year => year !== 'Unknown')));
 
             const x2 = d3.scaleBand()
                 .domain(years)
@@ -220,25 +221,28 @@
                 .attr("height", height)
                 .attr("class", "chart-svg");
 
-            stackedSvg.selectAll(".bar")
-                .data(pivotData)
+            const stackedData = d3.stack()
+                .keys(['Fell', 'Found'])
+                (pivotData);
+
+            stackedSvg.append("g")
+                .attr("transform", `translate(${margin.left},${margin.top})`)
+                .selectAll(".layer")
+                .data(stackedData)
                 .enter().append("g")
+                .attr("class", "layer")
+                .attr("fill", d => color(d.key))
                 .selectAll("rect")
-                .data(d => [
-                    { key: 'Fell', value: d.Fell },
-                    { key: 'Found', value: d.Found }
-                ])
+                .data(d => d)
                 .enter().append("rect")
-                .attr("x", d => x2(d.key))
-                .attr("y", d => y2(d.value))
+                .attr("x", d => x2(d.data.year))
+                .attr("y", d => y2(d[1]))
+                .attr("height", d => y2(d[0]) - y2(d[1]))
                 .attr("width", x2.bandwidth())
-                .attr("height", d => height - y2(d.value))
-                .attr("class", d => `bar-${d.key.toLowerCase()}`)
-                .style("fill", d => color(d.key))
                 .on("mouseover", function(event, d) {
                     tooltip
                         .style("display", "block")
-                        .html(`Type: ${d.key}<br>Number: ${d.value}`);
+                        .html(`Year: ${d.data.year}<br>${d.key}: ${d[1] - d[0]}`);
                 })
                 .on("mousemove", function(event) {
                     tooltip
@@ -252,18 +256,18 @@
             // Add X and Y axes to the stacked bar chart
             stackedSvg.append("g")
                 .attr("transform", `translate(${margin.left},${height + margin.top})`)
-                .call(d3.axisBottom(x2))
+                .call(d3.axisBottom(x2).tickSize(0))
                 .append("text")
                 .attr("class", "axis-label")
                 .attr("x", width)
                 .attr("y", margin.bottom - 10)
                 .attr("fill", "#fff") // Set color to white for axis label
                 .attr("text-anchor", "end")
-                .text("Year Found");
+                .text("Year");
 
             stackedSvg.append("g")
                 .attr("transform", `translate(${margin.left},${margin.top})`)
-                .call(d3.axisLeft(y2).ticks(10, ",.0f"))
+                .call(d3.axisLeft(y2).ticks(10))
                 .append("text")
                 .attr("class", "axis-label")
                 .attr("x", -margin.left)
@@ -278,13 +282,9 @@
                 .attr("class", "grid")
                 .call(d3.axisLeft(y2)
                     .ticks(10)
-                    .tickSize(-totalWidth)
+                    .tickSize(-width)
                     .tickFormat('')
                 );
-
-            // Initialize the scroll offset after appending the charts to the DOM
-            horizontalContainer.node().scrollBy(totalWidth, 0);
-            stackedContainer.node().scrollBy(totalWidth, 0);
         });
     </script>
 </body>
