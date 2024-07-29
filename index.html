@@ -149,11 +149,13 @@
             context.fill();
 
             // Draw country borders
-            context.beginPath();
-            path(countryBorders);
-            context.strokeStyle = "#333";
-            context.lineWidth = 1;
-            context.stroke();
+            if (countryBorders) {
+                context.beginPath();
+                path(countryBorders);
+                context.strokeStyle = "#333";
+                context.lineWidth = 1;
+                context.stroke();
+            }
 
             // Draw heat map
             drawHeatMap();
@@ -197,20 +199,13 @@
                 d3.json('https://skillet64.github.io/498/land-110m.json'),
                 d3.csv('https://skillet64.github.io/498/Sheet 1-ml-Meteorite_Landings.csv'),
                 d3.csv('https://skillet64.github.io/498/biggest.csv'),
-                d3.csv('https://skillet64.github.io/498/ml-Meteorite_Landings Pivot-ml-Meteorite_Landings Pivot.csv', function(d, i, columns) {
-                    
-                        year: d[columns[0]], // First column header: "fell"
-                        Fell: +d[columns[1]], // Second column header: "Fell"
-                        Found: +d[columns[2]], // Third column header: "Found"
-                        total: +d[columns[3]] // Fourth column header: "Grand Total"
-                    
-                })
+                d3.csv('https://skillet64.github.io/498/ml-Meteorite_Landings Pivot-ml-Meteorite_Landing Pivot.csv')
             ]).then(([land50, land110, mlData, biggestData, fellFoundData]) => {
                 console.log('Data loaded successfully');
                 console.log('fellFoundData:', fellFoundData); // Log the data to check its structure
                 
                 landData = topojson.feature(land50, land50.objects.land);
-                countryBorders = topojson.feature(land110, land110.objects.land);
+                countryBorders = topojson.feature(land110, land110.objects.countries); // Ensure the correct object is used
                 pinsData = mlData;
                 largestData = biggestData;
                 
@@ -422,4 +417,3 @@
     </script>
 </body>
 </html>
-
