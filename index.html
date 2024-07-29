@@ -52,10 +52,7 @@
             padding: 10px;
             box-sizing: border-box;
         }
-        .bar-chart {
-            height: 300px;
-            width: 50%;
-        }
+        .bar-chart,
         .stacked-bar-chart {
             height: 300px;
             width: 50%;
@@ -85,14 +82,14 @@
                 </p>
             </div>
             <div class="chart bar-chart-container">
-                <div class="bar-chart"></div>
+                <svg class="bar-chart"></svg>
             </div>
         </div>
 
         <!-- Row for the Stacked Bar Chart and its right-side text -->
         <div class="chart-row">
             <div class="chart stacked-bar-chart-container">
-                <div class="stacked-bar-chart"></div>
+                <svg class="stacked-bar-chart"></svg>
             </div>
             <div class="text-container text-right">
                 <h2>Number of Finds Over Time</h2>
@@ -112,9 +109,8 @@
     </div>
     
     <script>
-        const chartContainerHeight = 600; // Combined height for the charts section
         const width = window.innerWidth;
-        const height = window.innerHeight - chartContainerHeight; // Height for the map
+        const height = window.innerHeight / 2; // Height for the map
         const radius = Math.min(width, height) / 2.2; // Adjust scale for the globe
 
         const canvas = d3.select("#mapCanvas")
@@ -130,7 +126,7 @@
         const path = d3.geoPath().projection(projection).context(context);
 
         let landData, countryBorders, pinsData, largestData, fellFoundData;
-
+        
         function render() {
             context.clearRect(0, 0, width, height);
 
@@ -141,10 +137,12 @@
             context.fill();
 
             // Draw the land
-            context.beginPath();
-            path(landData);
-            context.fillStyle = "#bada55"; // Green for land
-            context.fill();
+            if (landData) {
+                context.beginPath();
+                path(landData);
+                context.fillStyle = "#bada55"; // Green for land
+                context.fill();
+            }
 
             // Draw country borders
             if (countryBorders) {
@@ -160,7 +158,6 @@
         }
 
         function drawBubbleMap() {
-            // Aggregate data by location
             const aggregatedData = d3.rollups(
                 pinsData,
                 v => v.length, // Aggregate count
@@ -190,6 +187,121 @@
             });
         }
 
+        function drawBarChart() {
+            const svg = d3.select(".bar-chart")
+                .attr("width", 800)
+                .attr("height", 300);
+
+            const margin = { top: 20, right: 30, bottom: 40, left: 40 };
+            const width = +svg.attr("width") - margin.left - margin.right;
+            const height = +svg.attr("height") - margin.top - margin.bottom;
+
+            const x = d3.scaleBand().range([0, width]).padding(0.1);
+            const y = d3.scaleLinear().range([height, 0]);
+
+            const g = svg.append("g")
+                .attr("transform", `translate(${margin.left},${margin.top})`);
+
+            // Define scales
+            x.domain(largestData.map(d => d.name));
+            y.domain([0, d3.max(largestData, d => +d['mass (g) (Sum)'])]);
+
+            // Draw bars
+            g.selectAll(".bar")
+                .data(largestData)
+                .enter().append("rect")
+                .attr("class", "bar")
+                .attr("x", d => x(d.name))
+                .attr("y", d => y(+d['mass (g) (Sum)']))
+                .attr("width", x.bandwidth())
+                .attr("height", d => height - y(+d['mass (g) (Sum)']))
+                .attr("fill", "#ff5733")
+                .on("mouseover", function(event, d) {
+                    d3.select(".tooltip")
+                        .style("display", "block")
+                        .html(`Name: ${d.name}<br>Mass: ${d['mass (g) (Sum)']} g<br>Year: ${d.year}`);
+                })
+                .on("mousemove", function(event) {
+                    d3.select(".tooltip")
+                        .style("top", (event.pageY + 5) + "px")
+                        .style("left", (event.pageX + 5) + "px");
+                })
+                .on("mouseout", function() {
+                    d3.select(".tooltip").style("display", "none");
+                });
+
+            // Add X and Y axis
+            g.append("g")
+                .attr("class", "x-axis")
+                .attr("transform", `translate(0,${height})`)
+                .call(d3.axisBottom(x));
+
+            g.append("g")
+                .attr("class", "y-axis")
+                .call(d3.axisLeft(y));
+        }
+
+        function drawStackedBarChart() {
+            const svg = d3.select(".stacked-bar-chart")
+                .attr("width", 800)
+                .attr("height", 300);
+
+            const margin = { top: 20, right: 30, bottom: 40, left: 40 };
+            const width = +svg.attr("width") - margin.left - margin.right;
+            const height = +svg.attr("height") - margin.top - margin.bottom;
+
+            const x = d3.scaleBand().range([0, width]).padding(0.1);
+            const y = d3.scaleLinear().range([height, 0]);
+            const color = d3.scaleOrdinal(d3.schemeCategory10);
+
+            const data = d3.nest()
+                .key(d => d.year)
+                .entries(fellFoundData);
+
+            const keys = data.map(d => d.key);
+
+            x.domain(keys);
+            y.domain([0, d3.max(fellFoundData, d => d3.sum(keys, key => +d[key] || 0))]);
+
+            const g = svg.append("g")
+                .attr("transform", `translate(${margin.left},${margin.top})`);
+
+            g.selectAll(".series")
+                .data(data)
+                .enter().append("g")
+                .attr("class", "series")
+                .attr("fill", (d, i) => color(i))
+                .selectAll("rect")
+                .data(d => d.values)
+                .enter().append("rect")
+                .attr("x", d => x(d.year))
+                .attr("y", d => y(d.value))
+                .attr("width", x.bandwidth())
+                .attr("height", d => height - y(d.value))
+                .on("mouseover", function(event, d) {
+                    d3.select(".tooltip")
+                        .style("display", "block")
+                        .html(`Year: ${d.year}<br>Value: ${d.value}`);
+                })
+                .on("mousemove", function(event) {
+                    d3.select(".tooltip")
+                        .style("top", (event.pageY + 5) + "px")
+                        .style("left", (event.pageX + 5) + "px");
+                })
+                .on("mouseout", function() {
+                    d3.select(".tooltip").style("display", "none");
+                });
+
+            g.append("g")
+                .attr("class", "x-axis")
+                .attr("transform", `translate(0,${height})`)
+                .call(d3.axisBottom(x));
+
+            g.append("g")
+                .attr("class", "y-axis")
+                .call(d3.axisLeft(y));
+        }
+
         function loadData() {
             Promise.all([
                 d3.json('https://skillet64.github.io/498/land-50m.json'),
@@ -204,85 +316,30 @@
                 console.log('biggestData:', biggestData);
                 console.log('fellFoundData:', fellFoundData);
 
-                // Check the structure of land110
+                // Inspect the objects in land110
                 console.log('land110.objects:', land110.objects);
 
-                // Use the correct data
-                landData = topojson.feature(land50, land50.objects.land);
-                
-                // Ensure `countries` exists in land110.objects
+                // Check if countries object exists
                 if (land110.objects && land110.objects.countries) {
+                    landData = topojson.feature(land50, land50.objects.land);
                     countryBorders = topojson.feature(land110, land110.objects.countries);
                 } else {
                     console.error('land110.objects.countries not found');
+                    landData = topojson.feature(land50, land50.objects.land); // Use a default object
+                    countryBorders = null; // Handle absence of country borders
                 }
 
                 pinsData = mlData;
                 largestData = biggestData;
-                
-                if (fellFoundData && fellFoundData.length > 0) {
-                    fellFoundData = fellFoundData;
-                } else {
-                    console.error('fellFoundData is undefined or empty');
-                    fellFoundData = [];
-                }
+                fellFoundData = fellFoundData.length > 0 ? fellFoundData : [];
 
-                // Draw the globe
+                // Draw the globe and charts
                 render();
                 drawBarChart(); // Draw the bar chart
                 drawStackedBarChart(); // Draw the stacked bar chart
             }).catch(error => {
                 console.error('Error loading data:', error);
             });
-        }
-
-        function drawBarChart() {
-            const data = largestData.map(d => ({
-                name: d.name,
-                mass: +d.mass
-            }));
-
-            const svg = d3.select('.bar-chart').append('svg')
-                .attr('width', '100%')
-                .attr('height', '100%');
-
-            const x = d3.scaleBand()
-                .domain(data.map(d => d.name))
-                .range([0, width])
-                .padding(0.1);
-
-            const y = d3.scaleLinear()
-                .domain([0, d3.max(data, d => d.mass)])
-                .nice()
-                .range([height, 0]);
-
-            svg.selectAll('.bar')
-                .data(data)
-                .enter().append('rect')
-                .attr('class', 'bar')
-                .attr('x', d => x(d.name))
-                .attr('y', d => y(d.mass))
-                .attr('width', x.bandwidth())
-                .attr('height', d => height - y(d.mass))
-                .on('mouseover', function(event, d) {
-                    d3.select('.tooltip')
-                        .style('display', 'block')
-                        .html(`Name: ${d.name}<br>Mass: ${d.mass}`);
-                })
-                .on('mousemove', function(event) {
-                    d3.select('.tooltip')
-                        .style('top', `${event.pageY + 5}px`)
-                        .style('left', `${event.pageX + 5}px`);
-                })
-                .on('mouseout', function() {
-                    d3.select('.tooltip')
-                        .style('display', 'none');
-                });
-        }
-
-        function drawStackedBarChart() {
-            // Your stacked bar chart code here
-            // Ensure it follows a similar pattern for tooltips and data integration
         }
 
         loadData();
