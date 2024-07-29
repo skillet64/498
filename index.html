@@ -196,9 +196,9 @@
             Promise.all([
                 d3.json('https://skillet64.github.io/498/land-50m.json'),
                 d3.json('https://skillet64.github.io/498/land-110m.json'),
-                d3.csv('https://skillet64.github.io/498/Sheet%201-ml-Meteorite_Landings.csv'),
+                d3.csv('https://skillet64.github.io/498/Sheet 1-ml-Meteorite_Landings.csv'),
                 d3.csv('https://skillet64.github.io/498/biggest.csv'),
-                d3.csv('https://skillet64.github.io/498/ml-Meteorite_Landings%20Pivot.csv')
+                d3.csv('https://skillet64.github.io/498/ml-Meteorite_Landings Pivot-ml-Meteorite_Landings Pivot.csv')
             ]).then(([land50, land110, mlData, biggestData, fellFoundData]) => {
                 console.log('Data loaded successfully');
                 console.log('fellFoundData:', fellFoundData); // Log the data to check its structure
