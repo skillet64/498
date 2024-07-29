@@ -193,8 +193,8 @@
                 d['Grand Total'] = d.Fell + d.Found; // Total number of meteorites for each year
             });
 
-            // Filter out data where year is "Unknown"
-            pivotData = pivotData.filter(d => d.year !== "Unknown");
+            // Filter out data where year is "Unknown" or Grand Total is 0
+            pivotData = pivotData.filter(d => d.year !== "Unknown" && d['Grand Total'] > 0);
 
             // Log processed data for debugging
             console.log("Processed Pivot Data:", pivotData);
