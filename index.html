@@ -3,82 +3,69 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Meteorite Data Visualizations</title>
-    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <title>Meteorite Discoveries</title>
     <style>
+        /* CSS Styles */
         body {
-            margin: 0;
             font-family: Arial, sans-serif;
-            background-color: #000; /* Black background for space theme */
-            color: #fff; /* White text color */
-        }
-        .container {
-            display: flex;
-            align-items: flex-start;
+            background-color: #1a1a1a; /* Dark background for better contrast */
+            color: #f0f0f0; /* Light text color */
+            margin: 0;
             padding: 20px;
-            box-sizing: border-box;
         }
-        .text-content {
-            width: 300px;
-            margin-right: 20px;
+
+        h2 {
+            color: #fff; /* White color for headings */
         }
-        .tooltip {
-            position: absolute;
-            background-color: rgba(0, 0, 0, 0.7);
-            color: #fff;
-            padding: 5px;
-            border-radius: 3px;
-            pointer-events: none;
-            display: none;
+
+        p {
+            color: #ccc; /* Light gray color for text */
+            font-size: 14px;
         }
-        svg {
-            border: 1px solid #444; /* Dark border for space theme */
+
+        .container {
+            margin: 20px 0;
         }
-        .bar-found {
-            fill: #00bfae; /* Teal color for Found bars */
+
+        #scroll-container {
+            overflow-x: auto;
+            white-space: nowrap;
+            margin: 20px 0;
         }
-        .bar-fell {
-            fill: #ff4d4d; /* Red color for Fell bars */
+
+        #stacked-chart-svg {
+            display: inline-block;
         }
-        .scatter {
-            fill: #ff4d4d; /* Red color for scatter points */
-        }
-        .label {
-            font-size: 12px;
-            fill: #fff; /* White color for labels */
-        }
+
         .axis-label {
             font-size: 14px;
             font-weight: bold;
             fill: #fff; /* White color for axis labels */
         }
+
+        .axis-text {
+            font-size: 12px;
+            fill: #fff; /* White color for axis labels */
+        }
+
         .grid line {
             stroke: #555; /* Nebula Gray */
             stroke-width: 1px;
         }
-        #scroll-container {
-            overflow-x: auto;
-            white-space: nowrap;
-        }
-        .chart-svg {
-            display: inline-block;
+
+        .tooltip {
+            position: absolute;
+            text-align: center;
+            padding: 5px;
+            background: #333;
+            color: #fff;
+            border-radius: 4px;
+            pointer-events: none;
+            display: none;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="text-content">
-            <h2>The Heaviest Meteorites Ever Recorded</h2>
-            <p>According to National Geographic, the largest meteorite ever discovered on Earth is the Hoba meteorite, found in Namibia in 1920. 
-                Weighing approximately 54,000 kilograms (119,000 pounds), the Hoba meteorite is so massive that it remains in its original location. 
-                Its enormous size and weight make it impossible to move, and it has been preserved exactly where it was discovered. 
-                This remarkable meteorite offers a unique opportunity to study an extraterrestrial object in its natural setting.
-            </p>
-        </div>
-        <div id="horizontal-chart-container">
-            <!-- Horizontal bar chart will be appended here -->
-        </div>
-    </div>
     <div class="container">
         <div class="text-content">
             <h2>Meteorite Discoveries Over Time</h2>
@@ -91,110 +78,29 @@
             </p>
         </div>
         <div id="scroll-container">
-            <svg id="stacked-chart-svg"
-                 width="1500"  <!-- Adjust width as needed -->
-                 height="600">
+            <svg id="stacked-chart-svg" width="1500" height="600">
                 <!-- Stacked bar chart will be appended here -->
             </svg>
         </div>
     </div>
-    <div class="tooltip"></div>
+
+    <div class="tooltip" id="tooltip"></div>
+
+    <script src="https://d3js.org/d3.v7.min.js"></script>
     <script>
-        // Define dimensions and margins
+        // JavaScript with D3.js
         const margin = { top: 20, right: 20, bottom: 100, left: 150 },
-              width = 1200 - margin.left - margin.right,
+              width = 1500 - margin.left - margin.right,
               height = 600 - margin.top - margin.bottom;
 
-        // Create SVG containers
-        const horizontalContainer = d3.select("#horizontal-chart-container");
-        const stackedSvg = d3.select("#stacked-chart-svg");
+        const stackedSvg = d3.select("#stacked-chart-svg")
+            .attr("width", width + margin.left + margin.right)
+            .attr("height", height + margin.top + margin.bottom);
 
-        // Create a tooltip
-        const tooltip = d3.select(".tooltip");
-
-        // Load and process data
         Promise.all([
-            d3.csv('https://skillet64.github.io/498/biggest.csv'),
             d3.csv('https://skillet64.github.io/498/ml-Meteorite_Landings Pivot-ml-Meteorite_Landings Pivot.csv')
-        ]).then(([biggestData, pivotData]) => {
+        ]).then(([pivotData]) => {
             
-            // Process the data for the horizontal bar chart
-            biggestData.forEach(d => {
-                d.mass = +d['mass (g) (Sum)'];
-            });
-            biggestData.sort((a, b) => b.mass - a.mass);
-
-            const x1 = d3.scaleLinear()
-                .domain([0, d3.max(biggestData, d => d.mass)])
-                .range([0, width]);
-
-            const y1 = d3.scaleBand()
-                .domain(biggestData.map(d => d.name))
-                .range([0, height])
-                .padding(0.1);
-
-            const horizontalSvg = horizontalContainer.append("svg")
-                .attr("width", width + margin.left + margin.right)
-                .attr("height", height + margin.top + margin.bottom)
-                .attr("class", "chart-svg");
-
-            horizontalSvg.append("g")
-                .attr("transform", `translate(${margin.left},${margin.top})`)
-                .selectAll(".bar")
-                .data(biggestData)
-                .enter().append("rect")
-                .attr("class", "bar")
-                .attr("x", 0)
-                .attr("y", d => y1(d.name))
-                .attr("width", d => x1(d.mass))
-                .attr("height", y1.bandwidth())
-                .attr("fill", "#00bfae") // Teal color for bars
-                .on("mouseover", function(event, d) {
-                    tooltip
-                        .style("display", "block")
-                        .html(`Name: ${d.name}<br>Mass: ${d.mass} g`);
-                })
-                .on("mousemove", function(event) {
-                    tooltip
-                        .style("top", (event.pageY + 5) + "px")
-                        .style("left", (event.pageX + 5) + "px");
-                })
-                .on("mouseout", function() {
-                    tooltip.style("display", "none");
-                });
-
-            horizontalSvg.append("g")
-                .attr("transform", `translate(${margin.left},${height + margin.top})`)
-                .call(d3.axisBottom(x1).tickSize(0))
-                .append("text")
-                .attr("class", "axis-label")
-                .attr("x", width)
-                .attr("y", margin.bottom - 10)
-                .attr("fill", "#fff") // Set color to white for axis label
-                .attr("text-anchor", "end")
-                .text("Mass (g)");
-
-            horizontalSvg.append("g")
-                .attr("transform", `translate(${margin.left},${margin.top})`)
-                .call(d3.axisLeft(y1))
-                .append("text")
-                .attr("class", "axis-label")
-                .attr("x", -margin.left)
-                .attr("y", -10)
-                .attr("fill", "#fff") // Set color to white for axis label
-                .attr("text-anchor", "start")
-                .text("Meteorite Name");
-
-            horizontalSvg.append("g")
-                .attr("transform", `translate(${margin.left},${margin.top})`)
-                .attr("class", "grid")
-                .call(d3.axisLeft(y1)
-                    .ticks(10)
-                    .tickSize(-width)
-                    .tickFormat('')
-                );
-
-            // Process the data for the stacked bar chart
             pivotData.forEach(d => {
                 d.Fell = +d.Fell;
                 d.Found = +d.Found;
@@ -218,6 +124,7 @@
                 .keys(['Fell', 'Found'])
                 (pivotData);
 
+            // Append bars
             stackedSvg.append("g")
                 .attr("transform", `translate(${margin.left},${margin.top})`)
                 .selectAll(".layer")
@@ -233,30 +140,30 @@
                 .attr("height", d => y2(d[0]) - y2(d[1]))
                 .attr("width", x2.bandwidth())
                 .on("mouseover", function(event, d) {
-                    tooltip
+                    d3.select("#tooltip")
                         .style("display", "block")
                         .html(`Year: ${d.data.fall}<br>${d.key}: ${d[1] - d[0]}`);
                 })
                 .on("mousemove", function(event) {
-                    tooltip
+                    d3.select("#tooltip")
                         .style("top", (event.pageY + 5) + "px")
                         .style("left", (event.pageX + 5) + "px");
                 })
                 .on("mouseout", function() {
-                    tooltip.style("display", "none");
+                    d3.select("#tooltip").style("display", "none");
                 });
 
+            // Append x-axis
             stackedSvg.append("g")
                 .attr("transform", `translate(${margin.left},${height + margin.top})`)
                 .call(d3.axisBottom(x2)
-                    .tickSize(0)
-                    .tickFormat(d => d) // Format tick labels
-                )
+                    .tickSize(0))
                 .selectAll("text")
+                .attr("class", "axis-text")
                 .attr("transform", "rotate(-45)")
-                .attr("text-anchor", "end")
-                .attr("fill", "#fff"); // White color for labels
+                .attr("text-anchor", "end");
 
+            // Append y-axis
             stackedSvg.append("g")
                 .attr("transform", `translate(${margin.left},${margin.top})`)
                 .call(d3.axisLeft(y2).ticks(10))
@@ -264,10 +171,11 @@
                 .attr("class", "axis-label")
                 .attr("x", -margin.left)
                 .attr("y", -10)
-                .attr("fill", "#fff") // Set color to white for axis label
+                .attr("fill", "#fff")
                 .attr("text-anchor", "start")
                 .text("Number of Meteorites");
 
+            // Append grid lines
             stackedSvg.append("g")
                 .attr("transform", `translate(${margin.left},${margin.top})`)
                 .attr("class", "grid")
