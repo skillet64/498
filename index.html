@@ -196,19 +196,34 @@
             // Filter out data where year is "Unknown" or Grand Total is 0
             pivotData = pivotData.filter(d => d.year !== "Unknown" && d['Grand Total'] > 0);
 
-            // Log processed data for debugging
-            console.log("Processed Pivot Data:", pivotData);
+            // Bin years into 10-year intervals
+            const binWidth = 10;
+            const binnedData = d3.rollup(
+                pivotData,
+                v => ({
+                    Fell: d3.sum(v, d => d.Fell),
+                    Found: d3.sum(v, d => d.Found),
+                    GrandTotal: d3.sum(v, d => d['Grand Total'])
+                }),
+                d => Math.floor(d.year / binWidth) * binWidth
+            );
 
-            // Extract years for the x-axis
-            const years = Array.from(new Set(pivotData.map(d => d.year)));
-            console.log(years)
+            // Convert the binned data into an array
+            const binnedArray = Array.from(binnedData, ([year, values]) => ({
+                year: `${year}-${year + binWidth - 1}`,
+                ...values
+            }));
+
+            // Log binned data for debugging
+            console.log("Binned Data:", binnedArray);
+
             const x2 = d3.scaleBand()
-                .domain(years)
+                .domain(binnedArray.map(d => d.year))
                 .range([0, width])
                 .padding(0.1);
 
             const y2 = d3.scaleLinear()
-                .domain([0, d3.max(pivotData, d => d['Grand Total'])])
+                .domain([0, d3.max(binnedArray, d => d['GrandTotal'])])
                 .nice()
                 .range([height, 0]);
 
@@ -223,7 +238,7 @@
 
             const stackedData = d3.stack()
                 .keys(['Fell', 'Found'])
-                (pivotData);
+                (binnedArray);
 
             // Log stacked data for debugging
             console.log("Stacked Data:", stackedData);
