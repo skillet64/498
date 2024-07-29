@@ -35,19 +35,19 @@
             border: 1px solid #444; /* Dark border for space theme */
         }
         .bar-found {
-            fill: #fff; /* White color for Found bars */
+            fill: #00bfae; /* Teal color for Found bars */
         }
         .bar-fell {
-            fill: #c0c0c0; /* Silver color for Fell bars */
+            fill: #ff4d4d; /* Red color for Fell bars */
         }
         .label {
             font-size: 12px;
-            fill: #fff; /* Star White */
+            fill: #fff; /* White color for labels */
         }
         .axis-label {
             font-size: 14px;
             font-weight: bold;
-            fill: #fff; /* Star White */
+            fill: #fff; /* White color for axis labels */
         }
         .grid line {
             stroke: #555; /* Nebula Gray */
@@ -188,65 +188,79 @@
                     .tickFormat('')
                 );
 
-            // Process the data for the diverging bar chart
+            // Process the data for the stacked bar chart
             pivotData.forEach(d => {
                 d.Fell = +d.Fell || 0;
                 d.Found = +d.Found || 0;
                 d['Grand Total'] = +d['Grand Total'] || 0;
             });
 
-            const years = pivotData.map(d => d.year);
+            const years = Array.from(new Set(pivotData.map(d => d.year))).sort();
 
-            const x2 = d3.scaleLinear()
-                .domain([d3.min(pivotData, d => -d.Fell), d3.max(pivotData, d => d.Found)])
-                .range([0, width]);
-
-            const y2 = d3.scaleBand()
+            const x2 = d3.scaleBand()
                 .domain(years)
-                .range([0, height])
+                .range([0, width])
                 .padding(0.1);
+
+            const y2 = d3.scaleLinear()
+                .domain([0, d3.max(pivotData, d => d.Found + d.Fell)])
+                .nice()
+                .range([height, 0]);
 
             // Draw bars for Found values
             svg2.selectAll(".bar-found")
                 .data(pivotData)
                 .enter().append("rect")
                 .attr("class", "bar-found")
-                .attr("x", d => x2(0))
-                .attr("y", d => y2(d.year))
-                .attr("width", d => x2(d.Found) - x2(0))
-                .attr("height", y2.bandwidth());
+                .attr("x", d => x2(d.year))
+                .attr("y", d => y2(d.Found + d.Fell))
+                .attr("width", x2.bandwidth())
+                .attr("height", d => height - y2(d.Found))
+                .style("fill", "#00bfae"); // Teal color for Found bars
 
             // Draw bars for Fell values
             svg2.selectAll(".bar-fell")
                 .data(pivotData)
                 .enter().append("rect")
                 .attr("class", "bar-fell")
-                .attr("x", d => x2(-d.Fell))
-                .attr("y", d => y2(d.year))
-                .attr("width", d => x2(d.Fell) - x2(0))
-                .attr("height", y2.bandwidth());
+                .attr("x", d => x2(d.year))
+                .attr("y", d => y2(d.Fell))
+                .attr("width", x2.bandwidth())
+                .attr("height", d => height - y2(d.Fell))
+                .style("fill", "#ff4d4d"); // Red color for Fell bars
 
-            // Add text labels for Found values
-            svg2.selectAll(".label-found")
-                .data(pivotData)
-                .enter().append("text")
-                .attr("class", "label")
-                .attr("x", d => x2(d.Found) + 5)
-                .attr("y", d => y2(d.year) + y2.bandwidth() / 2)
-                .text(d => d.Found)
-                .attr("dy", ".35em")
-                .style("text-anchor", "start");
+            // Add X and Y axis to the stacked bar chart
+            svg2.append("g")
+                .attr("class", "x-axis")
+                .attr("transform", `translate(0,${height})`)
+                .call(d3.axisBottom(x2))
+                .append("text")
+                .attr("class", "x-label")
+                .attr("x", width)
+                .attr("y", margin.bottom - 10)
+                .attr("fill", "#fff") // Set color to white for axis label
+                .attr("text-anchor", "end")
+                .text("Year");
 
-            // Add text labels for Fell values
-            svg2.selectAll(".label-fell")
-                .data(pivotData)
-                .enter().append("text")
-                .attr("class", "label")
-                .attr("x", d => x2(0) - 5)
-                .attr("y", d => y2(d.year) + y2.bandwidth() / 2)
-                .text(d => d.Fell)
-                .attr("dy", ".35em")
-                .style("text-anchor", "end");
+            svg2.append("g")
+                .attr("class", "y-axis")
+                .call(d3.axisLeft(y2))
+                .append("text")
+                .attr("class", "y-label")
+                .attr("x", -margin.left)
+                .attr("y", -10)
+                .attr("fill", "#fff") // Set color to white for axis label
+                .attr("text-anchor", "start")
+                .text("Number of Meteorites");
+
+            // Add grid lines to the stacked bar chart
+            svg2.append("g")
+                .attr("class", "grid")
+                .call(d3.axisLeft(y2)
+                    .ticks(10)
+                    .tickSize(-width)
+                    .tickFormat('')
+                );
         });
     </script>
 </body>
