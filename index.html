@@ -199,6 +199,7 @@
             // Log processed data for debugging
             console.log("Processed Pivot Data:", pivotData);
 
+            // Extract years for the x-axis
             const years = Array.from(new Set(pivotData.map(d => d.year)));
 
             const x2 = d3.scaleBand()
