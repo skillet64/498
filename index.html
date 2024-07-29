@@ -185,14 +185,17 @@
             pivotData.forEach(d => {
                 d.Fell = +d.Fell || 0; // Number of meteorites that fell each year
                 d.Found = +d.Found || 0; // Number of meteorites found each year
-                d.year = d.year || 'Unknown'; // Ensure there is a year field
+                d.year = d.fall; // Use fall as the year
                 d['Grand Total'] = d.Fell + d.Found; // Total number of meteorites for each year
             });
+
+            // Filter out data where year is "Unknown"
+            pivotData = pivotData.filter(d => d.year !== "Unknown");
 
             // Log processed data for debugging
             console.log("Processed Pivot Data:", pivotData);
 
-            const years = Array.from(new Set(pivotData.map(d => d.year).filter(year => year !== 'Unknown')));
+            const years = Array.from(new Set(pivotData.map(d => d.year)));
 
             const x2 = d3.scaleBand()
                 .domain(years)
