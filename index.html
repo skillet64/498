@@ -3,346 +3,136 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Meteorite Landings</title>
+    <title>Horizontal Bar Chart with Tooltip</title>
     <script src="https://d3js.org/d3.v7.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/versor@0.2/dist/versor.min.js"></script>
-    <script src="https://d3js.org/topojson.v3.min.js"></script>
     <style>
-        body { margin: 0; }
-        .tooltip { 
-            position: absolute; 
-            background: rgba(0, 0, 0, 0.7); 
-            color: #fff; 
-            padding: 5px; 
-            border-radius: 3px; 
-            pointer-events: none; 
-            display: none; 
-        }
-        .chart-container {
-            width: 100%;
+        body {
+            margin: 0;
             display: flex;
-            flex-direction: column;
-            align-items: center;
+            align-items: flex-start;
+            font-family: Arial, sans-serif;
         }
-        .chart-row {
-            width: 100%;
+        .container {
             display: flex;
-            justify-content: center;
-            margin: 10px 0;
+            align-items: flex-start;
+            margin: 20px;
         }
-        .chart {
-            margin: 0 10px;
+        .text-content {
+            width: 300px; /* Adjust width as needed */
+            margin-right: 20px; /* Space between text and chart */
         }
-        .text-container {
-            width: 20%;
-            padding: 10px;
-            box-sizing: border-box;
+        .tooltip {
+            position: absolute;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: #fff;
+            padding: 5px;
+            border-radius: 3px;
+            pointer-events: none;
+            display: none;
         }
-        .text-left {
-            text-align: left;
+        .bar {
+            fill: steelblue;
         }
-        .text-right {
-            text-align: right;
-        }
-        .bar-chart-container,
-        .stacked-bar-chart-container {
-            display: flex;
-            align-items: center;
-            width: 100%;
-            padding: 10px;
-            box-sizing: border-box;
-        }
-        .bar-chart,
-        .stacked-bar-chart {
-            height: 300px;
-            width: 50%;
-        }
-        .map-container {
-            width: 100%;
-            height: 50vh; /* Adjusted height for the map */
-            position: relative;
-        }
-        #mapCanvas {
-            width: 100%;
-            height: 100%;
+        .x-axis path,
+        .x-axis line {
+            display: none;
         }
     </style>
 </head>
 <body>
+    <div class="container">
+        <div class="text-content">
+            <h2>Heaviest Meteorites</h2>
+            <p>
+                This bar chart shows the heaviest meteorites ever recorded. Each bar represents a meteorite, with its length corresponding to its mass. The tooltip displays additional information about each meteorite, including the year it was found, its latitude and longitude, and its mass.
+            </p>
+        </div>
+        <svg width="960" height="600"></svg>
+    </div>
     <div class="tooltip"></div>
-    <div class="chart-container">
-        <!-- Row for the Bar Chart and its left-side text -->
-        <div class="chart-row">
-            <div class="text-container text-left">
-                <h2>The Heaviest Meteorites Ever Recorded</h2>
-                <p>According to National Geographic, the largest meteorite ever discovered on Earth is the Hoba meteorite, found in Namibia in 1920. 
-                    Weighing approximately 54,000 kilograms (119,000 pounds), the Hoba meteorite is so massive that it remains in its original location. 
-                    Its enormous size and weight make it impossible to move, and it has been preserved exactly where it was discovered. 
-                    This remarkable meteorite offers a unique opportunity to study an extraterrestrial object in its natural setting.
-                </p>
-            </div>
-            <div class="chart bar-chart-container">
-                <svg class="bar-chart"></svg>
-            </div>
-        </div>
-
-        <!-- Row for the Stacked Bar Chart and its right-side text -->
-        <div class="chart-row">
-            <div class="chart stacked-bar-chart-container">
-                <svg class="stacked-bar-chart"></svg>
-            </div>
-            <div class="text-container text-right">
-                <h2>Number of Finds Over Time</h2>
-                <p>
-                    There are several factors contributing to the increase in meteorite finds over recent years. 
-                    Primarily, climate change and advancements in transportation technology have played significant roles. 
-                    The melting of Arctic ice has uncovered numerous meteorite specimens that were previously inaccessible. 
-                    Additionally, our rapid technological progress has enabled us to retrieve meteorites from the Moon's craters. 
-                    This combination of environmental and technological changes has greatly enhanced our ability to discover and study meteorites. 
-                </p>
-            </div>
-        </div>
-    </div>
-
-    <div class="map-container">
-        <canvas id="mapCanvas"></canvas>
-    </div>
-    
     <script>
-        const width = window.innerWidth;
-        const height = window.innerHeight / 2; // Height for the map
-        const radius = Math.min(width, height) / 2.2; // Adjust scale for the globe
+        // Define dimensions and margins
+        const margin = { top: 20, right: 20, bottom: 30, left: 150 },
+              width = 960 - margin.left - margin.right,
+              height = 600 - margin.top - margin.bottom;
 
-        const canvas = d3.select("#mapCanvas")
-            .attr("width", width)
-            .attr("height", height);
+        // Create SVG container
+        const svg = d3.select("svg")
+            .attr("width", width + margin.left + margin.right)
+            .attr("height", height + margin.top + margin.bottom)
+          .append("g")
+            .attr("transform", `translate(${margin.left},${margin.top})`);
 
-        const context = canvas.node().getContext("2d");
-
-        const projection = d3.geoOrthographic()
-            .translate([width / 2, height / 2])
-            .scale(radius);
-
-        const path = d3.geoPath().projection(projection).context(context);
-
-        let landData, countryBorders, pinsData, largestData, fellFoundData;
-        
-        function render() {
-            context.clearRect(0, 0, width, height);
-
-            // Draw the map sphere
-            context.beginPath();
-            path({type: "Sphere"});
-            context.fillStyle = "#0000ff"; // Blue for oceans
-            context.fill();
-
-            // Draw the land
-            if (landData) {
-                context.beginPath();
-                path(landData);
-                context.fillStyle = "#bada55"; // Green for land
-                context.fill();
-            }
-
-            // Draw country borders
-            if (countryBorders) {
-                context.beginPath();
-                path(countryBorders);
-                context.strokeStyle = "#333";
-                context.lineWidth = 1;
-                context.stroke();
-            }
-
-            // Draw bubble map
-            drawBubbleMap();
-        }
-
-        function drawBubbleMap() {
-            const aggregatedData = d3.rollups(
-                pinsData,
-                v => v.length, // Aggregate count
-                d => [d.reclong, d.reclat] // Group by longitude and latitude
-            ).map(([coords, count]) => ({
-                coords,
-                count
-            }));
-
-            // Clear existing bubbles
-            context.globalAlpha = 0.7; // Set transparency for bubbles
-            context.fillStyle = "#ff5733"; // Default bubble color
-
-            aggregatedData.forEach(d => {
-                const [longitude, latitude] = d.coords;
-                const [x, y] = projection([+longitude, +latitude]);
-                if (x && y) {
-                    const maxBubbleSize = 20; // Maximum bubble size
-                    const minBubbleSize = 5; // Minimum bubble size
-                    const radius = Math.max(minBubbleSize, Math.min(maxBubbleSize, Math.sqrt(d.count))); // Size bubble based on count
-
-                    context.beginPath();
-                    context.arc(x, y, radius, 0, 2 * Math.PI);
-                    context.fillStyle = "#ff5733"; // Bubble color
-                    context.fill();
-                }
+        // Load data
+        Promise.all([
+            d3.csv('https://skillet64.github.io/498/biggest.csv'),
+            d3.csv('https://skillet64.github.io/498/Sheet 1-ml-Meteorite_Landings.csv')
+        ]).then(([biggestData, landingsData]) => {
+            
+            // Process data
+            biggestData.forEach(d => {
+                d.mass = +d['mass (g) (Sum)'];
             });
-        }
 
-        function drawBarChart() {
-            const svg = d3.select(".bar-chart")
-                .attr("width", 800)
-                .attr("height", 300);
+            landingsData.forEach(d => {
+                d.reclat = +d.reclat;
+                d.reclong = +d.reclong;
+            });
 
-            const margin = { top: 20, right: 30, bottom: 40, left: 40 };
-            const width = +svg.attr("width") - margin.left - margin.right;
-            const height = +svg.attr("height") - margin.top - margin.bottom;
-
-            const x = d3.scaleBand().range([0, width]).padding(0.1);
-            const y = d3.scaleLinear().range([height, 0]);
-
-            const g = svg.append("g")
-                .attr("transform", `translate(${margin.left},${margin.top})`);
+            // Create a map of IDs to their corresponding landing data
+            const landingMap = new Map(landingsData.map(d => [d.name, d]));
 
             // Define scales
-            x.domain(largestData.map(d => d.name));
-            y.domain([0, d3.max(largestData, d => +d['mass (g) (Sum)'])]);
+            const x = d3.scaleLinear()
+                .domain([0, d3.max(biggestData, d => d.mass)])
+                .range([0, width]);
+
+            const y = d3.scaleBand()
+                .domain(biggestData.map(d => d.name))
+                .range([height, 0])
+                .padding(0.1);
+
+            // Create tooltip
+            const tooltip = d3.select(".tooltip");
 
             // Draw bars
-            g.selectAll(".bar")
-                .data(largestData)
+            svg.selectAll(".bar")
+                .data(biggestData)
                 .enter().append("rect")
                 .attr("class", "bar")
-                .attr("x", d => x(d.name))
-                .attr("y", d => y(+d['mass (g) (Sum)']))
-                .attr("width", x.bandwidth())
-                .attr("height", d => height - y(+d['mass (g) (Sum)']))
-                .attr("fill", "#ff5733")
+                .attr("x", 0)
+                .attr("y", d => y(d.name))
+                .attr("width", d => x(d.mass))
+                .attr("height", y.bandwidth())
                 .on("mouseover", function(event, d) {
-                    d3.select(".tooltip")
+                    const landing = landingMap.get(d.name);
+                    tooltip
                         .style("display", "block")
-                        .html(`Name: ${d.name}<br>Mass: ${d['mass (g) (Sum)']} g<br>Year: ${d.year}`);
+                        .html(`Name: ${d.name}<br>Mass: ${d.mass} g<br>Year: ${landing ? landing.year : 'N/A'}<br>Lat: ${landing ? landing.reclat : 'N/A'}<br>Long: ${landing ? landing.reclong : 'N/A'}`);
                 })
                 .on("mousemove", function(event) {
-                    d3.select(".tooltip")
+                    tooltip
                         .style("top", (event.pageY + 5) + "px")
                         .style("left", (event.pageX + 5) + "px");
                 })
                 .on("mouseout", function() {
-                    d3.select(".tooltip").style("display", "none");
+                    tooltip.style("display", "none");
                 });
 
-            // Add X and Y axis
-            g.append("g")
+            // Add X axis
+            svg.append("g")
                 .attr("class", "x-axis")
                 .attr("transform", `translate(0,${height})`)
                 .call(d3.axisBottom(x));
 
-            g.append("g")
+            // Add Y axis
+            svg.append("g")
                 .attr("class", "y-axis")
                 .call(d3.axisLeft(y));
-        }
 
-        function drawStackedBarChart() {
-            const svg = d3.select(".stacked-bar-chart")
-                .attr("width", 800)
-                .attr("height", 300);
-
-            const margin = { top: 20, right: 30, bottom: 40, left: 40 };
-            const width = +svg.attr("width") - margin.left - margin.right;
-            const height = +svg.attr("height") - margin.top - margin.bottom;
-
-            const x = d3.scaleBand().range([0, width]).padding(0.1);
-            const y = d3.scaleLinear().range([height, 0]);
-            const color = d3.scaleOrdinal(d3.schemeCategory10);
-
-            const data = d3.nest()
-                .key(d => d.year)
-                .entries(fellFoundData);
-
-            const keys = data.map(d => d.key);
-
-            x.domain(keys);
-            y.domain([0, d3.max(fellFoundData, d => d3.sum(keys, key => +d[key] || 0))]);
-
-            const g = svg.append("g")
-                .attr("transform", `translate(${margin.left},${margin.top})`);
-
-            g.selectAll(".series")
-                .data(data)
-                .enter().append("g")
-                .attr("class", "series")
-                .attr("fill", (d, i) => color(i))
-                .selectAll("rect")
-                .data(d => d.values)
-                .enter().append("rect")
-                .attr("x", d => x(d.year))
-                .attr("y", d => y(d.value))
-                .attr("width", x.bandwidth())
-                .attr("height", d => height - y(d.value))
-                .on("mouseover", function(event, d) {
-                    d3.select(".tooltip")
-                        .style("display", "block")
-                        .html(`Year: ${d.year}<br>Value: ${d.value}`);
-                })
-                .on("mousemove", function(event) {
-                    d3.select(".tooltip")
-                        .style("top", (event.pageY + 5) + "px")
-                        .style("left", (event.pageX + 5) + "px");
-                })
-                .on("mouseout", function() {
-                    d3.select(".tooltip").style("display", "none");
-                });
-
-            g.append("g")
-                .attr("class", "x-axis")
-                .attr("transform", `translate(0,${height})`)
-                .call(d3.axisBottom(x));
-
-            g.append("g")
-                .attr("class", "y-axis")
-                .call(d3.axisLeft(y));
-        }
-
-        function loadData() {
-            Promise.all([
-                d3.json('https://skillet64.github.io/498/land-50m.json'),
-                d3.json('https://skillet64.github.io/498/land-110m.json'),
-                d3.csv('https://skillet64.github.io/498/Sheet 1-ml-Meteorite_Landings.csv'),
-                d3.csv('https://skillet64.github.io/498/biggest.csv'),
-                d3.csv('https://skillet64.github.io/498/ml-Meteorite_Landings Pivot-ml-Meteorite_Landings Pivot.csv')
-            ]).then(([land50, land110, mlData, biggestData, fellFoundData]) => {
-                console.log('land50:', land50);
-                console.log('land110:', land110);
-                console.log('mlData:', mlData);
-                console.log('biggestData:', biggestData);
-                console.log('fellFoundData:', fellFoundData);
-
-                // Inspect the objects in land110
-                console.log('land110.objects:', land110.objects);
-
-                // Check if countries object exists
-                if (land110.objects && land110.objects.countries) {
-                    landData = topojson.feature(land50, land50.objects.land);
-                    countryBorders = topojson.feature(land110, land110.objects.countries);
-                } else {
-                    console.error('land110.objects.countries not found');
-                    landData = topojson.feature(land50, land50.objects.land); // Use a default object
-                    countryBorders = null; // Handle absence of country borders
-                }
-
-                pinsData = mlData;
-                largestData = biggestData;
-                fellFoundData = fellFoundData.length > 0 ? fellFoundData : [];
-
-                // Draw the globe and charts
-                render();
-                drawBarChart(); // Draw the bar chart
-                drawStackedBarChart(); // Draw the stacked bar chart
-            }).catch(error => {
-                console.error('Error loading data:', error);
-            });
-        }
-
-        loadData();
+        }).catch(error => {
+            console.error('Error loading data:', error);
+        });
     </script>
 </body>
 </html>
