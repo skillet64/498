@@ -32,12 +32,11 @@
         svg {
             border: 1px solid #ccc;
         }
-        .bar {
+        .bar-found {
             fill: steelblue;
         }
-        .stacked-bar {
-            stroke: #000;
-            stroke-width: 0.5px;
+        .bar-fell {
+            fill: firebrick;
         }
         .label {
             font-size: 12px;
@@ -55,6 +54,7 @@
                     Its enormous size and weight make it impossible to move, and it has been preserved exactly where it was discovered. 
                     This remarkable meteorite offers a unique opportunity to study an extraterrestrial object in its natural setting.
                 </p>
+
         </div>
         <svg id="chart1" width="800" height="600"></svg>
     </div>
@@ -74,7 +74,7 @@
     <div class="tooltip"></div>
     <script>
         // Define dimensions and margins
-        const margin = { top: 20, right: 20, bottom: 30, left: 150 },
+        const margin = { top: 20, right: 20, bottom: 100, left: 150 },
               width = 800 - margin.left - margin.right,
               height = 600 - margin.top - margin.bottom;
 
@@ -95,7 +95,7 @@
         Promise.all([
             d3.csv('https://skillet64.github.io/498/biggest.csv'),
             d3.csv('https://skillet64.github.io/498/Sheet 1-ml-Meteorite_Landings.csv'),
-            d3.csv('https://skillet64.github.io/498/ml-Meteorite_Landings Pivot-ml-Meteorite_Landings Pivot.csv')
+            d3.csv('https://skillet64.github.io/498/Pivot-ml-Meteorite_Landings Pivot.csv')
         ]).then(([biggestData, landingsData, pivotData]) => {
 
             // Process the data for the horizontal bar chart
@@ -145,70 +145,121 @@
                     tooltip.style("display", "none");
                 });
 
-            svg1.selectAll(".label")
-                .data(biggestData)
-                .enter().append("text")
-                .attr("class", "label")
-                .attr("x", -10)
-                .attr("y", d => y1(d.name) + y1.bandwidth() / 2)
-                .attr("dy", ".35em")
-                .text(d => d.name)
-                .attr("text-anchor", "end");
+            // Add X and Y axis to the horizontal bar chart
+            svg1.append("g")
+                .attr("class", "x-axis")
+                .attr("transform", `translate(0,${height})`)
+                .call(d3.axisBottom(x1).ticks(10, ",.0f"))
+              .append("text")
+                .attr("class", "x-label")
+                .attr("x", width)
+                .attr("y", margin.bottom - 10)
+                .attr("fill", "#000")
+                .attr("text-anchor", "end")
+                .text("Mass (g)");
 
-            // Process the data for the stacked bar chart
+            svg1.append("g")
+                .attr("class", "y-axis")
+                .call(d3.axisLeft(y1).tickSize(0))
+              .append("text")
+                .attr("class", "y-label")
+                .attr("x", -margin.left)
+                .attr("y", -10)
+                .attr("fill", "#000")
+                .attr("text-anchor", "start")
+                .text("Meteorite Name");
+
+            // Process the data for the diverging bar chart
             pivotData.forEach(d => {
                 d.Fell = +d.Fell || 0;
                 d.Found = +d.Found || 0;
-                d.Grand_Total = +d['Grand Total'] || 0;
+                d['Grand Total'] = +d['Grand Total'] || 0;
             });
 
             const years = pivotData.map(d => d.year);
-            const stackKeys = ["Fell", "Found"];
 
-            const x2 = d3.scaleBand()
+            const x2 = d3.scaleLinear()
+                .domain([d3.min(pivotData, d => -d.Fell), d3.max(pivotData, d => d.Found)])
+                .range([0, width]);
+
+            const y2 = d3.scaleBand()
                 .domain(years)
-                .range([0, width])
+                .range([0, height])
                 .padding(0.1);
 
-            const y2 = d3.scaleLinear()
-                .domain([0, d3.max(pivotData, d => d['Grand Total'])])
-                .range([height, 0]);
-
             const color = d3.scaleOrdinal()
-                .domain(stackKeys)
-                .range(["#1f77b4", "#ff7f0e"]);
+                .domain(["Fell", "Found"])
+                .range(["#ff7f0e", "#1f77b4"]);
 
-            const stack = d3.stack()
-                .keys(stackKeys)
-                .order(d3.stackOrderNone)
-                .offset(d3.stackOffsetNone);
-
-            const series = stack(pivotData);
-
-            svg2.selectAll(".layer")
-                .data(series)
-                .enter().append("g")
-                .attr("class", "layer")
-                .attr("fill", d => color(d.key))
-              .selectAll("rect")
-                .data(d => d)
-                .enter().append("rect")
-                .attr("x", d => x2(d.data.year))
-                .attr("y", d => y2(d[1]))
-                .attr("height", d => y2(d[0]) - y2(d[1]))
-                .attr("width", x2.bandwidth())
-                .attr("class", "stacked-bar");
-
-            // Add labels to the stacked bar chart
-            svg2.selectAll(".label")
+            // Draw bars for Found values
+            svg2.selectAll(".bar-found")
                 .data(pivotData)
-                .enter().append("text")
-                .attr("x", d => x2(d.year) + x2.bandwidth() / 2)
-                .attr("y", d => y2(d['Grand Total']) - 10)
-                .attr("text-anchor", "middle")
-                .text(d => d['Grand Total'])
-                .attr("font-size", "10px")
-                .attr("fill", "#000");
+                .enter().append("rect")
+                .attr("class", "bar-found")
+                .attr("x", d => x2(0))
+                .attr("y", d => y2(d.year))
+                .attr("width", d => x2(d.Found))
+                .attr("height", y2.bandwidth())
+                .on("mouseover", function(event, d) {
+                    tooltip
+                        .style("display", "block")
+                        .html(`Year: ${d.year}<br>Found: ${d.Found}<br>Fell: ${d.Fell}`);
+                })
+                .on("mousemove", function(event) {
+                    tooltip
+                        .style("top", (event.pageY + 5) + "px")
+                        .style("left", (event.pageX + 5) + "px");
+                })
+                .on("mouseout", function() {
+                    tooltip.style("display", "none");
+                });
+
+            // Draw bars for Fell values
+            svg2.selectAll(".bar-fell")
+                .data(pivotData)
+                .enter().append("rect")
+                .attr("class", "bar-fell")
+                .attr("x", d => x2(0) - x2(d.Fell))
+                .attr("y", d => y2(d.year))
+                .attr("width", d => x2(d.Fell))
+                .attr("height", y2.bandwidth())
+                .on("mouseover", function(event, d) {
+                    tooltip
+                        .style("display", "block")
+                        .html(`Year: ${d.year}<br>Found: ${d.Found}<br>Fell: ${d.Fell}`);
+                })
+                .on("mousemove", function(event) {
+                    tooltip
+                        .style("top", (event.pageY + 5) + "px")
+                        .style("left", (event.pageX + 5) + "px");
+                })
+                .on("mouseout", function() {
+                    tooltip.style("display", "none");
+                });
+
+            // Add X and Y axis to the diverging bar chart
+            svg2.append("g")
+                .attr("class", "x-axis")
+                .attr("transform", `translate(0,${height})`)
+                .call(d3.axisBottom(x2).ticks(10, ",.0f"))
+              .append("text")
+                .attr("class", "x-label")
+                .attr("x", width)
+                .attr("y", margin.bottom - 10)
+                .attr("fill", "#000")
+                .attr("text-anchor", "end")
+                .text("Number");
+
+            svg2.append("g")
+                .attr("class", "y-axis")
+                .call(d3.axisLeft(y2).tickSize(0))
+              .append("text")
+                .attr("class", "y-label")
+                .attr("x", -margin.left)
+                .attr("y", -10)
+                .attr("fill", "#000")
+                .attr("text-anchor", "start")
+                .text("Year");
 
         }).catch(error => {
             console.error('Error loading data:', error);
@@ -216,3 +267,4 @@
     </script>
 </body>
 </html>
+
