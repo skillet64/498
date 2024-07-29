@@ -195,7 +195,7 @@
                 d['Grand Total'] = +d['Grand Total'] || 0;
             });
 
-            const years = Array.from(new Set(pivotData.map(d => d.year))).sort();
+            const years = Array.from(new Set(pivotData.map(d => d.Found)));
 
             const x2 = d3.scaleBand()
                 .domain(years)
@@ -203,31 +203,30 @@
                 .padding(0.1);
 
             const y2 = d3.scaleLinear()
-                .domain([0, d3.max(pivotData, d => d.Found + d.Fell)])
+                .domain([0, d3.max(pivotData, d => d['Grand Total'])])
                 .nice()
                 .range([height, 0]);
 
-            // Draw bars for Found values
-            svg2.selectAll(".bar-found")
-                .data(pivotData)
-                .enter().append("rect")
-                .attr("class", "bar-found")
-                .attr("x", d => x2(d.year))
-                .attr("y", d => y2(d.Found + d.Fell))
-                .attr("width", x2.bandwidth())
-                .attr("height", d => height - y2(d.Found))
-                .style("fill", "#00bfae"); // Teal color for Found bars
+            const color = d3.scaleOrdinal()
+                .domain(['Fell', 'Found'])
+                .range(['#ff4d4d', '#00bfae']); // Red for Fell, Teal for Found
 
-            // Draw bars for Fell values
-            svg2.selectAll(".bar-fell")
+            svg2.selectAll(".bar")
                 .data(pivotData)
+                .enter().append("g")
+                .attr("class", "bar-group")
+                .attr("fill", d => color(d.key))
+              .selectAll("rect")
+                .data(d => [
+                    { key: 'Fell', value: d.Fell },
+                    { key: 'Found', value: d.Found }
+                ])
                 .enter().append("rect")
-                .attr("class", "bar-fell")
-                .attr("x", d => x2(d.year))
-                .attr("y", d => y2(d.Fell))
+                .attr("x", d => x2(d.key === 'Fell' ? d.key : 'Found'))
+                .attr("y", d => y2(d.value))
                 .attr("width", x2.bandwidth())
-                .attr("height", d => height - y2(d.Fell))
-                .style("fill", "#ff4d4d"); // Red color for Fell bars
+                .attr("height", d => height - y2(d.value))
+                .attr("class", d => `bar-${d.key.toLowerCase()}`);
 
             // Add X and Y axis to the stacked bar chart
             svg2.append("g")
@@ -240,11 +239,11 @@
                 .attr("y", margin.bottom - 10)
                 .attr("fill", "#fff") // Set color to white for axis label
                 .attr("text-anchor", "end")
-                .text("Year");
+                .text("Year Found");
 
             svg2.append("g")
                 .attr("class", "y-axis")
-                .call(d3.axisLeft(y2))
+                .call(d3.axisLeft(y2).ticks(10, ",.0f"))
                 .append("text")
                 .attr("class", "y-label")
                 .attr("x", -margin.left)
