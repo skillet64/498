@@ -130,6 +130,8 @@
         const path = d3.geoPath().projection(projection).context(context);
 
         let landData, countryBorders, pinsData, largestData, fellFoundData;
+        let rotate = [0, 0];
+        let dragStart = [0, 0];
 
         function render() {
             context.clearRect(0, 0, width, height);
@@ -160,6 +162,7 @@
         }
 
         function drawBubbleMap() {
+            // Aggregate data by location
             const aggregatedData = d3.rollups(
                 pinsData,
                 v => v.length, // Aggregate count
@@ -169,6 +172,7 @@
                 count
             }));
 
+            // Clear existing bubbles
             context.globalAlpha = 0.7; // Set transparency for bubbles
             context.fillStyle = "#ff5733"; // Default bubble color
 
@@ -196,34 +200,23 @@
                 d3.csv('https://skillet64.github.io/498/biggest.csv'),
                 d3.csv('https://skillet64.github.io/498/ml-Meteorite_Landings Pivot-ml-Meteorite_Landings Pivot.csv')
             ]).then(([land50, land110, mlData, biggestData, fellFoundData]) => {
-                console.log('Land 50m:', land50);
-                console.log('Land 110m:', land110);
-
+                console.log('Data loaded successfully');
+                console.log('fellFoundData:', fellFoundData); // Log the data to check its structure
+                
                 landData = topojson.feature(land50, land50.objects.land);
-                countryBorders = topojson.feature(land110, land110.objects.countries);
-
-                // Check for missing data
-                pinsData = mlData.filter(d => d.reclong && d.reclat); // Filter out rows with missing coordinates
-                largestData = biggestData.map(d => ({
-                    name: d.name || 'Unknown',
-                    mass: +d['mass (g) (Sum)'] || 0,
-                    year: d.year || 'Unknown',
-                    lat: d.reclat || 'Unknown',
-                    long: d.reclong || 'Unknown'
-                }));
-                fellFoundData = fellFoundData.map(d => ({
-                    year: d.year || 'Unknown',
-                    finds: +d.finds || 0,
-                    falls: +d.falls || 0
-                }));
-
-                // Handle empty data cases
-                if (fellFoundData.length === 0) {
-                    console.warn('FellFoundData is empty or could not be loaded.');
+                countryBorders = topojson.feature(land110, land110.objects.countries); // Ensure the correct object is used
+                pinsData = mlData;
+                largestData = biggestData;
+                
+                if (fellFoundData && fellFoundData.length > 0) {
+                    fellFoundData = fellFoundData.map(d => ({
+                        year: +d.year,
+                        finds: +d.finds || 0,
+                        falls: +d.falls || 0
+                    }));
                 }
-
-                // Draw the globe
-                render();
+                
+                render(); // Draw the globe
                 drawBarChart(); // Draw the bar chart
                 drawStackedBarChart(); // Draw the stacked bar chart
             }).catch(error => {
@@ -234,121 +227,137 @@
         function drawBarChart() {
             const data = largestData.map(d => ({
                 name: d.name,
-                mass: +d.mass,
+                mass: +d['mass (g) (Sum)'],
                 year: d.year,
-                lat: d.lat,
-                long: d.long
+                lat: d.reclat,
+                long: d.reclong
             }));
 
-            const svg = d3.select('.bar-chart').append('svg')
-                .attr('width', '100%')
-                .attr('height', '100%'); // Adjust height based on the chart container height
+            const svg = d3.select(".bar-chart")
+                .append("svg")
+                .attr("width", "100%")
+                .attr("height", 300);
 
-            const x = d3.scaleLinear()
-                .domain([0, d3.max(data, d => d.mass)])
-                .nice()
-                .range([0, d3.select('.bar-chart').node().getBoundingClientRect().width]);
-
-            const y = d3.scaleBand()
+            const x = d3.scaleBand()
                 .domain(data.map(d => d.name))
-                .range([0, d3.select('.bar-chart').node().getBoundingClientRect().height])
+                .range([0, width * 0.5])
                 .padding(0.1);
 
-            // Tooltip setup
-            const tooltip = d3.select('.tooltip');
+            const y = d3.scaleLinear()
+                .domain([0, d3.max(data, d => d.mass)])
+                .nice()
+                .range([300, 0]);
 
-            svg.selectAll('.bar')
+            svg.selectAll(".bar")
                 .data(data)
-                .enter().append('rect')
-                .attr('class', 'bar')
-                .attr('x', 0)
-                .attr('y', d => y(d.name))
-                .attr('width', d => x(d.mass))
-                .attr('height', y.bandwidth())
-                .attr('fill', '#69b3a2')
-                .on('mouseover', function(event, d) {
-                    tooltip
-                        .style('display', 'block')
-                        .html(`
-                            <strong>Name:</strong> ${d.name}<br>
-                            <strong>Mass (g):</strong> ${d.mass}<br>
-                            <strong>Year:</strong> ${d.year}<br>
-                            <strong>Latitude:</strong> ${d.lat}<br>
-                            <strong>Longitude:</strong> ${d.long}
-                        `);
+                .enter().append("rect")
+                .attr("class", "bar")
+                .attr("x", d => x(d.name))
+                .attr("y", d => y(d.mass))
+                .attr("width", x.bandwidth())
+                .attr("height", d => 300 - y(d.mass))
+                .attr("fill", "#69b3a2")
+                .on("mouseover", (event, d) => {
+                    d3.select(".tooltip")
+                        .style("display", "block")
+                        .html(`Mass: ${d.mass} g<br>Year: ${d.year}<br>Latitude: ${d.lat}<br>Longitude: ${d.long}`)
+                        .style("left", (event.pageX + 5) + "px")
+                        .style("top", (event.pageY - 28) + "px");
                 })
-                .on('mousemove', function(event) {
-                    tooltip
-                        .style('top', `${event.pageY + 10}px`)
-                        .style('left', `${event.pageX + 10}px`);
-                })
-                .on('mouseout', function() {
-                    tooltip.style('display', 'none');
+                .on("mouseout", () => {
+                    d3.select(".tooltip").style("display", "none");
                 });
 
-            svg.append('g')
-                .attr('class', 'x-axis')
-                .attr('transform', `translate(0,${d3.select('.bar-chart').node().getBoundingClientRect().height})`)
+            svg.append("g")
+                .attr("class", "x-axis")
+                .attr("transform", `translate(0,${300})`)
                 .call(d3.axisBottom(x));
 
-            svg.append('g')
-                .attr('class', 'y-axis')
+            svg.append("g")
+                .attr("class", "y-axis")
                 .call(d3.axisLeft(y));
         }
 
         function drawStackedBarChart() {
-            const data = fellFoundData.map(d => ({
-                year: d.year,
-                finds: +d.finds || 0,
-                falls: +d.falls || 0
-            }));
+            const data = fellFoundData;
 
-            const svg = d3.select('.stacked-bar-chart').append('svg')
-                .attr('width', '100%')
-                .attr('height', '100%'); // Adjust height based on the chart container height
+            const svg = d3.select(".stacked-bar-chart")
+                .append("svg")
+                .attr("width", "100%")
+                .attr("height", 300);
 
             const x = d3.scaleBand()
                 .domain(data.map(d => d.year))
-                .range([0, d3.select('.stacked-bar-chart').node().getBoundingClientRect().width])
+                .range([0, width * 0.5])
                 .padding(0.1);
 
             const y = d3.scaleLinear()
                 .domain([0, d3.max(data, d => d.finds + d.falls)])
                 .nice()
-                .range([d3.select('.stacked-bar-chart').node().getBoundingClientRect().height, 0]);
+                .range([300, 0]);
 
             const color = d3.scaleOrdinal()
-                .domain(['Finds', 'Falls'])
-                .range(['#1f77b4', '#ff7f0e']);
+                .domain(["finds", "falls"])
+                .range(["#1f77b4", "#ff7f0e"]);
 
-            svg.selectAll('.bar')
+            svg.selectAll(".bar")
                 .data(data)
-                .enter().append('g')
-                .attr('class', 'bar')
-                .attr('transform', d => `translate(${x(d.year)},0)`)
-                .selectAll('rect')
-                .data(d => [
-                    { type: 'finds', value: d.finds },
-                    { type: 'falls', value: d.falls }
-                ])
-                .enter().append('rect')
-                .attr('x', 0)
-                .attr('y', d => y(d3.sum(data.filter(d => d.year === d.year), d => d.value)) - y(d.value))
-                .attr('width', x.bandwidth())
-                .attr('height', d => y(d3.sum(data.filter(d => d.year === d.year), d => d.value)) - y(d.value))
-                .attr('fill', d => color(d.type));
+                .enter().append("g")
+                .attr("class", "bar")
+                .attr("transform", d => `translate(${x(d.year)},0)`)
+                .selectAll("rect")
+                .data(d => [{type: "finds", value: d.finds}, {type: "falls", value: d.falls}])
+                .enter().append("rect")
+                .attr("x", 0)
+                .attr("y", d => y(d.value))
+                .attr("width", x.bandwidth())
+                .attr("height", d => 300 - y(d.value))
+                .attr("fill", d => color(d.type))
+                .on("mouseover", (event, d) => {
+                    d3.select(".tooltip")
+                        .style("display", "block")
+                        .html(`Type: ${d.type}<br>Value: ${d.value}`)
+                        .style("left", (event.pageX + 5) + "px")
+                        .style("top", (event.pageY - 28) + "px");
+                })
+                .on("mouseout", () => {
+                    d3.select(".tooltip").style("display", "none");
+                });
 
-            svg.append('g')
-                .attr('class', 'x-axis')
-                .attr('transform', `translate(0,${d3.select('.stacked-bar-chart').node().getBoundingClientRect().height})`)
+            svg.append("g")
+                .attr("class", "x-axis")
+                .attr("transform", `translate(0,${300})`)
                 .call(d3.axisBottom(x));
 
-            svg.append('g')
-                .attr('class', 'y-axis')
+            svg.append("g")
+                .attr("class", "y-axis")
                 .call(d3.axisLeft(y));
         }
 
-        // Load and process data
+        function dragstarted(event) {
+            const [x, y] = projection.invert([event.x, event.y]);
+            dragStart = [x, y];
+        }
+
+        function dragged(event) {
+            const [x, y] = projection.invert([event.x, event.y]);
+            rotate = [rotate[0] + (x - dragStart[0]), rotate[1] - (y - dragStart[1])];
+            projection.rotate(rotate);
+            render();
+            dragStart = [x, y];
+        }
+
+        function dragended() {
+            // Optional: Add functionality when dragging ends
+        }
+
+        const drag = d3.drag()
+            .on("start", dragstarted)
+            .on("drag", dragged)
+            .on("end", dragended);
+
+        canvas.call(drag);
+
         loadData();
     </script>
 </body>
