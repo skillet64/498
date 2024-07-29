@@ -53,14 +53,8 @@
             stroke: #555; /* Nebula Gray */
             stroke-width: 1px;
         }
-        .scroll-container {
-            overflow-x: scroll;
-            -webkit-overflow-scrolling: touch;
-            white-space: nowrap;
-            margin-bottom: 20px;
-        }
         .chart-svg {
-            display: inline-block;
+            margin-bottom: 20px;
         }
     </style>
 </head>
@@ -74,7 +68,7 @@
                 This remarkable meteorite offers a unique opportunity to study an extraterrestrial object in its natural setting.
             </p>
         </div>
-        <div class="scroll-container" id="horizontal-chart-container">
+        <div id="horizontal-chart-container">
             <!-- Horizontal bar chart will be appended here -->
         </div>
     </div>
@@ -89,7 +83,7 @@
                 This combination of environmental and technological changes has greatly enhanced our ability to discover and study meteorites. 
             </p>
         </div>
-        <div class="scroll-container" id="stacked-chart-container">
+        <div id="stacked-chart-container">
             <!-- Stacked bar chart will be appended here -->
         </div>
     </div>
@@ -99,7 +93,6 @@
         const margin = { top: 20, right: 20, bottom: 100, left: 150 },
               width = 800 - margin.left - margin.right,
               height = 600 - margin.top - margin.bottom;
-        const totalWidth = width * 6;
 
         // Create SVG containers
         const horizontalContainer = d3.select("#horizontal-chart-container");
@@ -130,8 +123,8 @@
                 .padding(0.1);
 
             const horizontalSvg = horizontalContainer.append("svg")
-                .attr("width", totalWidth)
-                .attr("height", height)
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom)
                 .attr("class", "chart-svg");
 
             horizontalSvg.append("g")
@@ -196,7 +189,7 @@
             pivotData.forEach(d => {
                 d.Fell = +d.Fell || 0; // Number of meteorites that fell each year
                 d.Found = +d.Found || 0; // Number of meteorites found each year
-                d.year = d.fell || 'Unknown'; // Ensure there is a fell field
+                d.year = d.fell || 'Unknown'; // Use 'year' for the x-axis
                 d['Grand Total'] = d.Fell + d.Found; // Total number of meteorites for each year
             });
 
@@ -217,8 +210,8 @@
                 .range(['#ff4d4d', '#00bfae']); // Red and Teal colors
 
             const stackedSvg = stackedContainer.append("svg")
-                .attr("width", totalWidth)
-                .attr("height", height)
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom)
                 .attr("class", "chart-svg");
 
             const stackedData = d3.stack()
