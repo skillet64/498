@@ -40,6 +40,9 @@
         .bar-fell {
             fill: #ff4d4d; /* Red color for Fell bars */
         }
+        .scatter {
+            fill: #ff4d4d; /* Red color for scatter points */
+        }
         .label {
             font-size: 12px;
             fill: #fff; /* White color for labels */
@@ -83,8 +86,8 @@
                 This combination of environmental and technological changes has greatly enhanced our ability to discover and study meteorites. 
             </p>
         </div>
-        <div id="stacked-chart-container">
-            <!-- Stacked bar chart will be appended here -->
+        <div id="scatter-plot-container">
+            <!-- Scatter plot will be appended here -->
         </div>
     </div>
     <div class="tooltip"></div>
@@ -96,7 +99,7 @@
 
         // Create SVG containers
         const horizontalContainer = d3.select("#horizontal-chart-container");
-        const stackedContainer = d3.select("#stacked-chart-container");
+        const scatterContainer = d3.select("#scatter-plot-container");
 
         // Create a tooltip
         const tooltip = d3.select(".tooltip");
@@ -152,18 +155,7 @@
                     tooltip.style("display", "none");
                 });
 
-            // Add X and Y axes to the horizontal bar chart
-            horizontalSvg.append("g")
-                .attr("transform", `translate(${margin.left},${height + margin.top})`)
-                .call(d3.axisBottom(x1).ticks(10, ",.0f"))
-                .append("text")
-                .attr("class", "axis-label")
-                .attr("x", width)
-                .attr("y", margin.bottom - 10)
-                .attr("fill", "#fff") // Set color to white for axis label
-                .attr("text-anchor", "end")
-                .text("Mass (g)");
-
+            // Add Y axis to the horizontal bar chart
             horizontalSvg.append("g")
                 .attr("transform", `translate(${margin.left},${margin.top})`)
                 .call(d3.axisLeft(y1).tickSize(0))
@@ -185,57 +177,43 @@
                     .tickFormat('')
                 );
 
-            // Process the data for the stacked bar chart
+            // Process the data for the scatter plot
             pivotData.forEach(d => {
                 d.Fell = +d.Fell || 0; // Number of meteorites that fell each year
                 d.Found = +d.Found || 0; // Number of meteorites found each year
-                d.year = d.fell || 'Unknown'; // Use 'year' for the x-axis
+                d.year = +d.fell || 'Unknown'; // Ensure year is a number for plotting
                 d['Grand Total'] = d.Fell + d.Found; // Total number of meteorites for each year
             });
 
             const years = Array.from(new Set(pivotData.map(d => d.year).filter(year => year !== 'Unknown')));
 
-            const x2 = d3.scaleBand()
-                .domain(years)
-                .range([0, width])
-                .padding(0.1);
+            const x2 = d3.scaleLinear()
+                .domain([d3.min(years), d3.max(years)])
+                .range([0, width]);
 
             const y2 = d3.scaleLinear()
                 .domain([0, d3.max(pivotData, d => d['Grand Total'])])
                 .nice()
                 .range([height, 0]);
 
-            const color = d3.scaleOrdinal()
-                .domain(['Fell', 'Found'])
-                .range(['#ff4d4d', '#00bfae']); // Red and Teal colors
-
-            const stackedSvg = stackedContainer.append("svg")
+            const scatterSvg = scatterContainer.append("svg")
                 .attr("width", width + margin.left + margin.right)
                 .attr("height", height + margin.top + margin.bottom)
                 .attr("class", "chart-svg");
 
-            const stackedData = d3.stack()
-                .keys(['Fell', 'Found'])
-                (pivotData);
-
-            stackedSvg.append("g")
+            scatterSvg.append("g")
                 .attr("transform", `translate(${margin.left},${margin.top})`)
-                .selectAll(".layer")
-                .data(stackedData)
-                .enter().append("g")
-                .attr("class", "layer")
-                .attr("fill", d => color(d.key))
-                .selectAll("rect")
-                .data(d => d)
-                .enter().append("rect")
-                .attr("x", d => x2(d.data.year))
-                .attr("y", d => y2(d[1]))
-                .attr("height", d => y2(d[0]) - y2(d[1]))
-                .attr("width", x2.bandwidth())
+                .selectAll("circle")
+                .data(pivotData)
+                .enter().append("circle")
+                .attr("class", "scatter")
+                .attr("cx", d => x2(d.year))
+                .attr("cy", d => y2(d['Grand Total']))
+                .attr("r", 5)
                 .on("mouseover", function(event, d) {
                     tooltip
                         .style("display", "block")
-                        .html(`Year: ${d.data.year}<br>${d.key}: ${d[1] - d[0]}`);
+                        .html(`Year: ${d.year}<br>Grand Total: ${d['Grand Total']}`);
                 })
                 .on("mousemove", function(event) {
                     tooltip
@@ -246,10 +224,10 @@
                     tooltip.style("display", "none");
                 });
 
-            // Add X and Y axes to the stacked bar chart
-            stackedSvg.append("g")
+            // Add X and Y axes to the scatter plot
+            scatterSvg.append("g")
                 .attr("transform", `translate(${margin.left},${height + margin.top})`)
-                .call(d3.axisBottom(x2).tickSize(0))
+                .call(d3.axisBottom(x2))
                 .append("text")
                 .attr("class", "axis-label")
                 .attr("x", width)
@@ -258,9 +236,9 @@
                 .attr("text-anchor", "end")
                 .text("Year");
 
-            stackedSvg.append("g")
+            scatterSvg.append("g")
                 .attr("transform", `translate(${margin.left},${margin.top})`)
-                .call(d3.axisLeft(y2).ticks(10))
+                .call(d3.axisLeft(y2))
                 .append("text")
                 .attr("class", "axis-label")
                 .attr("x", -margin.left)
@@ -269,8 +247,8 @@
                 .attr("text-anchor", "start")
                 .text("Number of Meteorites");
 
-            // Add grid lines to the stacked bar chart
-            stackedSvg.append("g")
+            // Add grid lines to the scatter plot
+            scatterSvg.append("g")
                 .attr("transform", `translate(${margin.left},${margin.top})`)
                 .attr("class", "grid")
                 .call(d3.axisLeft(y2)
