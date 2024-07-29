@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Horizontal Bar Chart with Tooltip</title>
+    <title>Meteorite Data Visualizations</title>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <style>
         body {
@@ -17,8 +17,8 @@
             box-sizing: border-box;
         }
         .text-content {
-            width: 300px; /* Adjust width as needed */
-            margin-right: 20px; /* Space between text and chart */
+            width: 300px;
+            margin-right: 20px;
         }
         .tooltip {
             position: absolute;
@@ -30,10 +30,14 @@
             display: none;
         }
         svg {
-            /* Remove border around SVG */
+            border: 1px solid #ccc;
         }
         .bar {
             fill: steelblue;
+        }
+        .stacked-bar {
+            stroke: #000;
+            stroke-width: 0.5px;
         }
         .label {
             font-size: 12px;
@@ -51,9 +55,21 @@
                     Its enormous size and weight make it impossible to move, and it has been preserved exactly where it was discovered. 
                     This remarkable meteorite offers a unique opportunity to study an extraterrestrial object in its natural setting.
                 </p>
-
         </div>
-        <svg width="800" height="600"></svg>
+        <svg id="chart1" width="800" height="600"></svg>
+    </div>
+    <div class="container">
+        <div class="text-content">
+            <h2>Number of Finds Over Time</h2>
+                <p>
+                    There are several factors contributing to the increase in meteorite finds over recent years. 
+                    Primarily, climate change and advancements in transportation technology have played significant roles. 
+                    The melting of Arctic ice has uncovered numerous meteorite specimens that were previously inaccessible. 
+                    Additionally, our rapid technological progress has enabled us to retrieve meteorites from the Moon's craters. 
+                    This combination of environmental and technological changes has greatly enhanced our ability to discover and study meteorites. 
+                </p>
+        </div>
+        <svg id="chart2" width="800" height="600"></svg>
     </div>
     <div class="tooltip"></div>
     <script>
@@ -62,8 +78,14 @@
               width = 800 - margin.left - margin.right,
               height = 600 - margin.top - margin.bottom;
 
-        // Create SVG container
-        const svg = d3.select("svg")
+        // Create SVG containers
+        const svg1 = d3.select("#chart1")
+            .attr("width", width + margin.left + margin.right)
+            .attr("height", height + margin.top + margin.bottom)
+          .append("g")
+            .attr("transform", `translate(${margin.left},${margin.top})`);
+
+        const svg2 = d3.select("#chart2")
             .attr("width", width + margin.left + margin.right)
             .attr("height", height + margin.top + margin.bottom)
           .append("g")
@@ -72,10 +94,11 @@
         // Load data
         Promise.all([
             d3.csv('https://skillet64.github.io/498/biggest.csv'),
-            d3.csv('https://skillet64.github.io/498/Sheet 1-ml-Meteorite_Landings.csv')
-        ]).then(([biggestData, landingsData]) => {
-            
-            // Process data
+            d3.csv('https://skillet64.github.io/498/Sheet 1-ml-Meteorite_Landings.csv'),
+            d3.csv('https://skillet64.github.io/498/Pivot-ml-Meteorite_Landings Pivot.csv')
+        ]).then(([biggestData, landingsData, pivotData]) => {
+
+            // Process the data for the horizontal bar chart
             biggestData.forEach(d => {
                 d.mass = +d['mass (g) (Sum)'];
             });
@@ -85,34 +108,28 @@
                 d.reclong = +d.reclong;
             });
 
-            // Create a map of IDs to their corresponding landing data
             const landingMap = new Map(landingsData.map(d => [d.name, d]));
-
-            // Sort data in descending order by mass
             biggestData.sort((a, b) => b.mass - a.mass);
 
-            // Define scales
-            const x = d3.scaleLinear()
+            const x1 = d3.scaleLinear()
                 .domain([0, d3.max(biggestData, d => d.mass)])
                 .range([0, width]);
 
-            const y = d3.scaleBand()
+            const y1 = d3.scaleBand()
                 .domain(biggestData.map(d => d.name))
                 .range([0, height])
                 .padding(0.1);
 
-            // Create tooltip
             const tooltip = d3.select(".tooltip");
 
-            // Draw bars
-            svg.selectAll(".bar")
+            svg1.selectAll(".bar")
                 .data(biggestData)
                 .enter().append("rect")
                 .attr("class", "bar")
                 .attr("x", 0)
-                .attr("y", d => y(d.name))
-                .attr("width", d => x(d.mass))
-                .attr("height", y.bandwidth())
+                .attr("y", d => y1(d.name))
+                .attr("width", d => x1(d.mass))
+                .attr("height", y1.bandwidth())
                 .on("mouseover", function(event, d) {
                     const landing = landingMap.get(d.name);
                     tooltip
@@ -128,16 +145,70 @@
                     tooltip.style("display", "none");
                 });
 
-            // Add labels to the left of the bars
-            svg.selectAll(".label")
+            svg1.selectAll(".label")
                 .data(biggestData)
                 .enter().append("text")
                 .attr("class", "label")
-                .attr("x", -10) // Adjust this value to position the label
-                .attr("y", d => y(d.name) + y.bandwidth() / 2)
+                .attr("x", -10)
+                .attr("y", d => y1(d.name) + y1.bandwidth() / 2)
                 .attr("dy", ".35em")
                 .text(d => d.name)
                 .attr("text-anchor", "end");
+
+            // Process the data for the stacked bar chart
+            pivotData.forEach(d => {
+                d.Fell = +d.Fell || 0;
+                d.Found = +d.Found || 0;
+                d.Grand_Total = +d['Grand Total'] || 0;
+            });
+
+            const years = pivotData.map(d => d.year);
+            const stackKeys = ["Fell", "Found"];
+
+            const x2 = d3.scaleBand()
+                .domain(years)
+                .range([0, width])
+                .padding(0.1);
+
+            const y2 = d3.scaleLinear()
+                .domain([0, d3.max(pivotData, d => d['Grand Total'])])
+                .range([height, 0]);
+
+            const color = d3.scaleOrdinal()
+                .domain(stackKeys)
+                .range(["#1f77b4", "#ff7f0e"]);
+
+            const stack = d3.stack()
+                .keys(stackKeys)
+                .order(d3.stackOrderNone)
+                .offset(d3.stackOffsetNone);
+
+            const series = stack(pivotData);
+
+            svg2.selectAll(".layer")
+                .data(series)
+                .enter().append("g")
+                .attr("class", "layer")
+                .attr("fill", d => color(d.key))
+              .selectAll("rect")
+                .data(d => d)
+                .enter().append("rect")
+                .attr("x", d => x2(d.data.year))
+                .attr("y", d => y2(d[1]))
+                .attr("height", d => y2(d[0]) - y2(d[1]))
+                .attr("width", x2.bandwidth())
+                .attr("class", "stacked-bar");
+
+            // Add labels to the stacked bar chart
+            svg2.selectAll(".label")
+                .data(pivotData)
+                .enter().append("text")
+                .attr("x", d => x2(d.year) + x2.bandwidth() / 2)
+                .attr("y", d => y2(d['Grand Total']) - 10)
+                .attr("text-anchor", "middle")
+                .text(d => d['Grand Total'])
+                .attr("font-size", "10px")
+                .attr("fill", "#000");
 
         }).catch(error => {
             console.error('Error loading data:', error);
@@ -145,4 +216,3 @@
     </script>
 </body>
 </html>
-
