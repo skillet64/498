@@ -74,7 +74,6 @@
 <body>
     <div class="tooltip"></div>
     <div class="chart-container">
-        <!-- Row for the Bar Chart and its left-side text -->
         <div class="chart-row">
             <div class="text-container text-left">
                 <h2>The Heaviest Meteorites Ever Recorded</h2>
@@ -89,7 +88,6 @@
             </div>
         </div>
 
-        <!-- Row for the Stacked Bar Chart and its right-side text -->
         <div class="chart-row">
             <div class="chart stacked-bar-chart-container">
                 <div class="stacked-bar-chart"></div>
@@ -130,25 +128,20 @@
         const path = d3.geoPath().projection(projection).context(context);
 
         let landData, countryBorders, pinsData, largestData, fellFoundData;
-        let rotate = [0, 0];
-        let dragStart = [0, 0];
 
         function render() {
             context.clearRect(0, 0, width, height);
 
-            // Draw the map sphere
             context.beginPath();
             path({type: "Sphere"});
-            context.fillStyle = "#0000ff"; // Blue for oceans
+            context.fillStyle = "#0000ff";
             context.fill();
 
-            // Draw the land
             context.beginPath();
             path(landData);
-            context.fillStyle = "#bada55"; // Green for land
+            context.fillStyle = "#bada55";
             context.fill();
 
-            // Draw country borders
             if (countryBorders) {
                 context.beginPath();
                 path(countryBorders);
@@ -157,36 +150,33 @@
                 context.stroke();
             }
 
-            // Draw bubble map
             drawBubbleMap();
         }
 
         function drawBubbleMap() {
-            // Aggregate data by location
             const aggregatedData = d3.rollups(
                 pinsData,
-                v => v.length, // Aggregate count
-                d => [d.reclong, d.reclat] // Group by longitude and latitude
+                v => v.length,
+                d => [d.reclong, d.reclat]
             ).map(([coords, count]) => ({
                 coords,
                 count
             }));
 
-            // Clear existing bubbles
-            context.globalAlpha = 0.7; // Set transparency for bubbles
-            context.fillStyle = "#ff5733"; // Default bubble color
+            context.globalAlpha = 0.7;
+            context.fillStyle = "#ff5733";
 
             aggregatedData.forEach(d => {
                 const [longitude, latitude] = d.coords;
                 const [x, y] = projection([+longitude, +latitude]);
                 if (x && y) {
-                    const maxBubbleSize = 20; // Maximum bubble size
-                    const minBubbleSize = 5; // Minimum bubble size
-                    const radius = Math.max(minBubbleSize, Math.min(maxBubbleSize, Math.sqrt(d.count))); // Size bubble based on count
+                    const maxBubbleSize = 20;
+                    const minBubbleSize = 5;
+                    const radius = Math.max(minBubbleSize, Math.min(maxBubbleSize, Math.sqrt(d.count)));
 
                     context.beginPath();
                     context.arc(x, y, radius, 0, 2 * Math.PI);
-                    context.fillStyle = "#ff5733"; // Bubble color
+                    context.fillStyle = "#ff5733";
                     context.fill();
                 }
             });
@@ -200,25 +190,18 @@
                 d3.csv('https://skillet64.github.io/498/biggest.csv'),
                 d3.csv('https://skillet64.github.io/498/ml-Meteorite_Landings Pivot-ml-Meteorite_Landings Pivot.csv')
             ]).then(([land50, land110, mlData, biggestData, fellFoundData]) => {
-                console.log('Data loaded successfully');
-                console.log('fellFoundData:', fellFoundData); // Log the data to check its structure
-                
+                console.log('Land 50m:', land50);
+                console.log('Land 110m:', land110);
+
                 landData = topojson.feature(land50, land50.objects.land);
-                countryBorders = topojson.feature(land110, land110.objects.countries); // Ensure the correct object is used
+                countryBorders = topojson.feature(land110, land110.objects.countries);
                 pinsData = mlData;
                 largestData = biggestData;
-                
-                if (fellFoundData && fellFoundData.length > 0) {
-                    fellFoundData = fellFoundData;
-                } else {
-                    console.error('fellFoundData is undefined or empty');
-                    fellFoundData = []; // Default to an empty array
-                }
+                fellFoundData = fellFoundData || [];
 
-                // Draw the globe
                 render();
-                drawBarChart(); // Draw the bar chart
-                drawStackedBarChart(); // Draw the stacked bar chart
+                drawBarChart();
+                drawStackedBarChart();
             }).catch(error => {
                 console.error('Error loading data:', error);
             });
@@ -227,15 +210,12 @@
         function drawBarChart() {
             const data = largestData.map(d => ({
                 name: d.name,
-                mass: +d['mass (g) (Sum)'],
-                year: d.year,
-                lat: d.reclat,
-                long: d.reclong
+                mass: +d['mass (g) (Sum)']
             }));
 
             const svg = d3.select('.bar-chart').append('svg')
                 .attr('width', '100%')
-                .attr('height', '100%'); // Adjust height based on the chart container height
+                .attr('height', '100%');
 
             const x = d3.scaleLinear()
                 .domain([0, d3.max(data, d => d.mass)])
@@ -276,7 +256,7 @@
 
             const svg = d3.select('.stacked-bar-chart').append('svg')
                 .attr('width', '100%')
-                .attr('height', '100%'); // Adjust height based on the chart container height
+                .attr('height', '100%');
 
             const x = d3.scaleBand()
                 .domain(data.map(d => d.year))
@@ -319,7 +299,6 @@
                 .call(d3.axisLeft(y));
         }
 
-        // Load data when the window loads
         window.onload = loadData;
     </script>
 </body>
