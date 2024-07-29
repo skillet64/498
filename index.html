@@ -48,7 +48,7 @@
 <body>
     <div class="container">
         <div class="text-content">
-            <h2>The Heaviest Meteorites Ever Recorded</h2>
+           <h2>The Heaviest Meteorites Ever Recorded</h2>
                 <p>According to National Geographic, the largest meteorite ever discovered on Earth is the Hoba meteorite, found in Namibia in 1920. 
                     Weighing approximately 54,000 kilograms (119,000 pounds), the Hoba meteorite is so massive that it remains in its original location. 
                     Its enormous size and weight make it impossible to move, and it has been preserved exactly where it was discovered. 
@@ -60,8 +60,7 @@
     </div>
     <div class="container">
         <div class="text-content">
-            <h2>Number of Finds Over Time</h2>
-                <p>
+             <p>
                     There are several factors contributing to the increase in meteorite finds over recent years. 
                     Primarily, climate change and advancements in transportation technology have played significant roles. 
                     The melting of Arctic ice has uncovered numerous meteorite specimens that were previously inaccessible. 
@@ -95,7 +94,7 @@
         Promise.all([
             d3.csv('https://skillet64.github.io/498/biggest.csv'),
             d3.csv('https://skillet64.github.io/498/Sheet 1-ml-Meteorite_Landings.csv'),
-            d3.csv('https://skillet64.github.io/498/ml-Meteorite_Landings Pivot-ml-Meteorite_Landings Pivot.csv')
+            d3.csv('https://skillet64.github.io/498/ml-Meteorite_landings Pivot-ml-Meteorite_Landings Pivot.csv')
         ]).then(([biggestData, landingsData, pivotData]) => {
 
             // Process the data for the horizontal bar chart
@@ -187,9 +186,8 @@
                 .range([0, height])
                 .padding(0.1);
 
-            const color = d3.scaleOrdinal()
-                .domain(["Fell", "Found"])
-                .range(["#ff7f0e", "#1f77b4"]);
+            const colorFound = "#1f77b4";
+            const colorFell = "#ff7f0e";
 
             // Draw bars for Found values
             svg2.selectAll(".bar-found")
@@ -198,21 +196,9 @@
                 .attr("class", "bar-found")
                 .attr("x", d => x2(0))
                 .attr("y", d => y2(d.year))
-                .attr("width", d => x2(d.Found))
+                .attr("width", d => x2(d.Found) - x2(0))
                 .attr("height", y2.bandwidth())
-                .on("mouseover", function(event, d) {
-                    tooltip
-                        .style("display", "block")
-                        .html(`Year: ${d.year}<br>Found: ${d.Found}<br>Fell: ${d.Fell}`);
-                })
-                .on("mousemove", function(event) {
-                    tooltip
-                        .style("top", (event.pageY + 5) + "px")
-                        .style("left", (event.pageX + 5) + "px");
-                })
-                .on("mouseout", function() {
-                    tooltip.style("display", "none");
-                });
+                .attr("fill", colorFound);
 
             // Draw bars for Fell values
             svg2.selectAll(".bar-fell")
@@ -223,23 +209,35 @@
                 .attr("y", d => y2(d.year))
                 .attr("width", d => x2(d.Fell))
                 .attr("height", y2.bandwidth())
-                .on("mouseover", function(event, d) {
-                    tooltip
-                        .style("display", "block")
-                        .html(`Year: ${d.year}<br>Found: ${d.Found}<br>Fell: ${d.Fell}`);
-                })
-                .on("mousemove", function(event) {
-                    tooltip
-                        .style("top", (event.pageY + 5) + "px")
-                        .style("left", (event.pageX + 5) + "px");
-                })
-                .on("mouseout", function() {
-                    tooltip.style("display", "none");
-                });
+                .attr("fill", colorFell);
+
+            // Add text labels for Found and Fell values
+            svg2.append("g")
+                .attr("font-family", "sans-serif")
+                .attr("font-size", 10)
+              .selectAll("text")
+              .data(pivotData)
+              .enter().append("text")
+                .attr("text-anchor", d => d.Found > 0 ? "start" : "end")
+                .attr("x", d => x2(d.Found) + 4)
+                .attr("y", d => y2(d.year) + y2.bandwidth() / 2)
+                .attr("dy", "0.35em")
+                .text(d => d.Found);
+
+            svg2.append("g")
+                .attr("font-family", "sans-serif")
+                .attr("font-size", 10)
+              .selectAll("text")
+              .data(pivotData)
+              .enter().append("text")
+                .attr("text-anchor", d => d.Fell > 0 ? "start" : "end")
+                .attr("x", d => x2(0) - x2(d.Fell) - 4)
+                .attr("y", d => y2(d.year) + y2.bandwidth() / 2)
+                .attr("dy", "0.35em")
+                .text(d => d.Fell);
 
             // Add X and Y axis to the diverging bar chart
             svg2.append("g")
-                .attr("class", "x-axis")
                 .attr("transform", `translate(0,${height})`)
                 .call(d3.axisBottom(x2).ticks(10, ",.0f"))
               .append("text")
@@ -251,7 +249,7 @@
                 .text("Number");
 
             svg2.append("g")
-                .attr("class", "y-axis")
+                .attr("transform", `translate(0,0)`)
                 .call(d3.axisLeft(y2).tickSize(0))
               .append("text")
                 .attr("class", "y-label")
@@ -267,4 +265,3 @@
     </script>
 </body>
 </html>
-
