@@ -9,6 +9,8 @@
         body {
             margin: 0;
             font-family: Arial, sans-serif;
+            background-color: #000; /* Black background for space theme */
+            color: #fff; /* White text color */
         }
         .container {
             display: flex;
@@ -30,238 +32,48 @@
             display: none;
         }
         svg {
-            border: 1px solid #ccc;
+            border: 1px solid #444; /* Dark border for space theme */
         }
         .bar-found {
-            fill: steelblue;
+            fill: #1f77b4; /* Deep Space Blue */
         }
         .bar-fell {
-            fill: firebrick;
+            fill: #d62728; /* Cosmic Red */
         }
         .label {
             font-size: 12px;
-            text-anchor: end;
-            alignment-baseline: middle;
+            fill: #fff; /* Star White */
+        }
+        .axis-label {
+            font-size: 14px;
+            font-weight: bold;
+            fill: #fff; /* Star White */
+        }
+        .grid line {
+            stroke: #555; /* Nebula Gray */
+            stroke-width: 1px;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="text-content">
-           <h2>The Heaviest Meteorites Ever Recorded</h2>
-                <p>According to National Geographic, the largest meteorite ever discovered on Earth is the Hoba meteorite, found in Namibia in 1920. 
-                    Weighing approximately 54,000 kilograms (119,000 pounds), the Hoba meteorite is so massive that it remains in its original location. 
-                    Its enormous size and weight make it impossible to move, and it has been preserved exactly where it was discovered. 
-                    This remarkable meteorite offers a unique opportunity to study an extraterrestrial object in its natural setting.
-                </p>
-
+            <h2>The Heaviest Meteorites Ever Recorded</h2>
+            <p>According to National Geographic, the largest meteorite ever discovered on Earth is the Hoba meteorite, found in Namibia in 1920. 
+                Weighing approximately 54,000 kilograms (119,000 pounds), the Hoba meteorite is so massive that it remains in its original location. 
+                Its enormous size and weight make it impossible to move, and it has been preserved exactly where it was discovered. 
+                This remarkable meteorite offers a unique opportunity to study an extraterrestrial object in its natural setting.
+            </p>
         </div>
         <svg id="chart1" width="800" height="600"></svg>
     </div>
     <div class="container">
         <div class="text-content">
-             <p>
-                    There are several factors contributing to the increase in meteorite finds over recent years. 
-                    Primarily, climate change and advancements in transportation technology have played significant roles. 
-                    The melting of Arctic ice has uncovered numerous meteorite specimens that were previously inaccessible. 
-                    Additionally, our rapid technological progress has enabled us to retrieve meteorites from the Moon's craters. 
-                    This combination of environmental and technological changes has greatly enhanced our ability to discover and study meteorites. 
-                </p>
-        </div>
-        <svg id="chart2" width="800" height="600"></svg>
-    </div>
-    <div class="tooltip"></div>
-    <script>
-        // Define dimensions and margins
-        const margin = { top: 20, right: 20, bottom: 100, left: 150 },
-              width = 800 - margin.left - margin.right,
-              height = 600 - margin.top - margin.bottom;
+            <h2>Meteorite Discoveries Over Time</h2>
+            <p>
+                There are several factors contributing to the increase in meteorite finds over recent years. 
+                Primarily, climate change and advancements in transportation technology have played significant roles. 
+                The melting of Arctic ice has uncovered numerous meteorite specimens that were previously inaccessible. 
+                Additionally, our rapid technological progress has enabled us to retrieve meteorites from the Moon's craters. 
+                This combination of environm
 
-        // Create SVG containers
-        const svg1 = d3.select("#chart1")
-            .attr("width", width + margin.left + margin.right)
-            .attr("height", height + margin.top + margin.bottom)
-          .append("g")
-            .attr("transform", `translate(${margin.left},${margin.top})`);
-
-        const svg2 = d3.select("#chart2")
-            .attr("width", width + margin.left + margin.right)
-            .attr("height", height + margin.top + margin.bottom)
-          .append("g")
-            .attr("transform", `translate(${margin.left},${margin.top})`);
-
-        // Load data
-        Promise.all([
-            d3.csv('https://skillet64.github.io/498/biggest.csv'),
-            d3.csv('https://skillet64.github.io/498/Sheet 1-ml-Meteorite_Landings.csv'),
-            d3.csv('https://skillet64.github.io/498/ml-Meteorite_Landings Pivot-ml-Meteorite_Landings Pivot.csv')
-        ]).then(([biggestData, landingsData, pivotData]) => {
-
-            // Process the data for the horizontal bar chart
-            biggestData.forEach(d => {
-                d.mass = +d['mass (g) (Sum)'];
-            });
-
-            landingsData.forEach(d => {
-                d.reclat = +d.reclat;
-                d.reclong = +d.reclong;
-            });
-
-            const landingMap = new Map(landingsData.map(d => [d.name, d]));
-            biggestData.sort((a, b) => b.mass - a.mass);
-
-            const x1 = d3.scaleLinear()
-                .domain([0, d3.max(biggestData, d => d.mass)])
-                .range([0, width]);
-
-            const y1 = d3.scaleBand()
-                .domain(biggestData.map(d => d.name))
-                .range([0, height])
-                .padding(0.1);
-
-            const tooltip = d3.select(".tooltip");
-
-            svg1.selectAll(".bar")
-                .data(biggestData)
-                .enter().append("rect")
-                .attr("class", "bar")
-                .attr("x", 0)
-                .attr("y", d => y1(d.name))
-                .attr("width", d => x1(d.mass))
-                .attr("height", y1.bandwidth())
-                .on("mouseover", function(event, d) {
-                    const landing = landingMap.get(d.name);
-                    tooltip
-                        .style("display", "block")
-                        .html(`Name: ${d.name}<br>Mass: ${d.mass} g<br>Year: ${landing ? landing.year : 'N/A'}<br>Lat: ${landing ? landing.reclat : 'N/A'}<br>Long: ${landing ? landing.reclong : 'N/A'}`);
-                })
-                .on("mousemove", function(event) {
-                    tooltip
-                        .style("top", (event.pageY + 5) + "px")
-                        .style("left", (event.pageX + 5) + "px");
-                })
-                .on("mouseout", function() {
-                    tooltip.style("display", "none");
-                });
-
-            // Add X and Y axis to the horizontal bar chart
-            svg1.append("g")
-                .attr("class", "x-axis")
-                .attr("transform", `translate(0,${height})`)
-                .call(d3.axisBottom(x1).ticks(10, ",.0f"))
-              .append("text")
-                .attr("class", "x-label")
-                .attr("x", width)
-                .attr("y", margin.bottom - 10)
-                .attr("fill", "#000")
-                .attr("text-anchor", "end")
-                .text("Mass (g)");
-
-            svg1.append("g")
-                .attr("class", "y-axis")
-                .call(d3.axisLeft(y1).tickSize(0))
-              .append("text")
-                .attr("class", "y-label")
-                .attr("x", -margin.left)
-                .attr("y", -10)
-                .attr("fill", "#000")
-                .attr("text-anchor", "start")
-                .text("Meteorite Name");
-
-            // Process the data for the diverging bar chart
-            pivotData.forEach(d => {
-                d.Fell = +d.Fell || 0;
-                d.Found = +d.Found || 0;
-                d['Grand Total'] = +d['Grand Total'] || 0;
-            });
-
-            const years = pivotData.map(d => d.year);
-
-            const x2 = d3.scaleLinear()
-                .domain([d3.min(pivotData, d => -d.Fell), d3.max(pivotData, d => d.Found)])
-                .range([0, width]);
-
-            const y2 = d3.scaleBand()
-                .domain(years)
-                .range([0, height])
-                .padding(0.1);
-
-            const colorFound = "#1f77b4";
-            const colorFell = "#ff7f0e";
-
-            // Draw bars for Found values
-            svg2.selectAll(".bar-found")
-                .data(pivotData)
-                .enter().append("rect")
-                .attr("class", "bar-found")
-                .attr("x", d => x2(0))
-                .attr("y", d => y2(d.year))
-                .attr("width", d => x2(d.Found) - x2(0))
-                .attr("height", y2.bandwidth())
-                .attr("fill", colorFound);
-
-            // Draw bars for Fell values
-            svg2.selectAll(".bar-fell")
-                .data(pivotData)
-                .enter().append("rect")
-                .attr("class", "bar-fell")
-                .attr("x", d => x2(0) - x2(d.Fell))
-                .attr("y", d => y2(d.year))
-                .attr("width", d => x2(d.Fell))
-                .attr("height", y2.bandwidth())
-                .attr("fill", colorFell);
-
-            // Add text labels for Found and Fell values
-            svg2.append("g")
-                .attr("font-family", "sans-serif")
-                .attr("font-size", 10)
-              .selectAll("text")
-              .data(pivotData)
-              .enter().append("text")
-                .attr("text-anchor", d => d.Found > 0 ? "start" : "end")
-                .attr("x", d => x2(d.Found) + 4)
-                .attr("y", d => y2(d.year) + y2.bandwidth() / 2)
-                .attr("dy", "0.35em")
-                .text(d => d.Found);
-
-            svg2.append("g")
-                .attr("font-family", "sans-serif")
-                .attr("font-size", 10)
-              .selectAll("text")
-              .data(pivotData)
-              .enter().append("text")
-                .attr("text-anchor", d => d.Fell > 0 ? "start" : "end")
-                .attr("x", d => x2(0) - x2(d.Fell) - 4)
-                .attr("y", d => y2(d.year) + y2.bandwidth() / 2)
-                .attr("dy", "0.35em")
-                .text(d => d.Fell);
-
-            // Add X and Y axis to the diverging bar chart
-            svg2.append("g")
-                .attr("transform", `translate(0,${height})`)
-                .call(d3.axisBottom(x2).ticks(10, ",.0f"))
-              .append("text")
-                .attr("class", "x-label")
-                .attr("x", width)
-                .attr("y", margin.bottom - 10)
-                .attr("fill", "#000")
-                .attr("text-anchor", "end")
-                .text("Number");
-
-            svg2.append("g")
-                .attr("transform", `translate(0,0)`)
-                .call(d3.axisLeft(y2).tickSize(0))
-              .append("text")
-                .attr("class", "y-label")
-                .attr("x", -margin.left)
-                .attr("y", -10)
-                .attr("fill", "#000")
-                .attr("text-anchor", "start")
-                .text("Year");
-
-        }).catch(error => {
-            console.error('Error loading data:', error);
-        });
-    </script>
-</body>
-</html>
