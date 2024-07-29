@@ -74,6 +74,7 @@
 <body>
     <div class="tooltip"></div>
     <div class="chart-container">
+        <!-- Row for the Bar Chart and its left-side text -->
         <div class="chart-row">
             <div class="text-container text-left">
                 <h2>The Heaviest Meteorites Ever Recorded</h2>
@@ -88,6 +89,7 @@
             </div>
         </div>
 
+        <!-- Row for the Stacked Bar Chart and its right-side text -->
         <div class="chart-row">
             <div class="chart stacked-bar-chart-container">
                 <div class="stacked-bar-chart"></div>
@@ -132,16 +134,19 @@
         function render() {
             context.clearRect(0, 0, width, height);
 
+            // Draw the map sphere
             context.beginPath();
             path({type: "Sphere"});
-            context.fillStyle = "#0000ff";
+            context.fillStyle = "#0000ff"; // Blue for oceans
             context.fill();
 
+            // Draw the land
             context.beginPath();
             path(landData);
-            context.fillStyle = "#bada55";
+            context.fillStyle = "#bada55"; // Green for land
             context.fill();
 
+            // Draw country borders
             if (countryBorders) {
                 context.beginPath();
                 path(countryBorders);
@@ -150,33 +155,34 @@
                 context.stroke();
             }
 
+            // Draw bubble map
             drawBubbleMap();
         }
 
         function drawBubbleMap() {
             const aggregatedData = d3.rollups(
                 pinsData,
-                v => v.length,
-                d => [d.reclong, d.reclat]
+                v => v.length, // Aggregate count
+                d => [d.reclong, d.reclat] // Group by longitude and latitude
             ).map(([coords, count]) => ({
                 coords,
                 count
             }));
 
-            context.globalAlpha = 0.7;
-            context.fillStyle = "#ff5733";
+            context.globalAlpha = 0.7; // Set transparency for bubbles
+            context.fillStyle = "#ff5733"; // Default bubble color
 
             aggregatedData.forEach(d => {
                 const [longitude, latitude] = d.coords;
                 const [x, y] = projection([+longitude, +latitude]);
                 if (x && y) {
-                    const maxBubbleSize = 20;
-                    const minBubbleSize = 5;
-                    const radius = Math.max(minBubbleSize, Math.min(maxBubbleSize, Math.sqrt(d.count)));
+                    const maxBubbleSize = 20; // Maximum bubble size
+                    const minBubbleSize = 5; // Minimum bubble size
+                    const radius = Math.max(minBubbleSize, Math.min(maxBubbleSize, Math.sqrt(d.count))); // Size bubble based on count
 
                     context.beginPath();
                     context.arc(x, y, radius, 0, 2 * Math.PI);
-                    context.fillStyle = "#ff5733";
+                    context.fillStyle = "#ff5733"; // Bubble color
                     context.fill();
                 }
             });
@@ -195,13 +201,31 @@
 
                 landData = topojson.feature(land50, land50.objects.land);
                 countryBorders = topojson.feature(land110, land110.objects.countries);
-                pinsData = mlData;
-                largestData = biggestData;
-                fellFoundData = fellFoundData || [];
 
+                // Check for missing data
+                pinsData = mlData.filter(d => d.reclong && d.reclat); // Filter out rows with missing coordinates
+                largestData = biggestData.map(d => ({
+                    name: d.name || 'Unknown',
+                    mass: +d['mass (g) (Sum)'] || 0,
+                    year: d.year || 'Unknown',
+                    lat: d.reclat || 'Unknown',
+                    long: d.reclong || 'Unknown'
+                }));
+                fellFoundData = fellFoundData.map(d => ({
+                    year: d.year || 'Unknown',
+                    finds: +d.finds || 0,
+                    falls: +d.falls || 0
+                }));
+
+                // Handle empty data cases
+                if (fellFoundData.length === 0) {
+                    console.warn('FellFoundData is empty or could not be loaded.');
+                }
+
+                // Draw the globe
                 render();
-                drawBarChart();
-                drawStackedBarChart();
+                drawBarChart(); // Draw the bar chart
+                drawStackedBarChart(); // Draw the stacked bar chart
             }).catch(error => {
                 console.error('Error loading data:', error);
             });
@@ -210,12 +234,15 @@
         function drawBarChart() {
             const data = largestData.map(d => ({
                 name: d.name,
-                mass: +d['mass (g) (Sum)']
+                mass: +d.mass,
+                year: d.year,
+                lat: d.lat,
+                long: d.long
             }));
 
             const svg = d3.select('.bar-chart').append('svg')
                 .attr('width', '100%')
-                .attr('height', '100%');
+                .attr('height', '100%'); // Adjust height based on the chart container height
 
             const x = d3.scaleLinear()
                 .domain([0, d3.max(data, d => d.mass)])
@@ -227,6 +254,9 @@
                 .range([0, d3.select('.bar-chart').node().getBoundingClientRect().height])
                 .padding(0.1);
 
+            // Tooltip setup
+            const tooltip = d3.select('.tooltip');
+
             svg.selectAll('.bar')
                 .data(data)
                 .enter().append('rect')
@@ -235,7 +265,26 @@
                 .attr('y', d => y(d.name))
                 .attr('width', d => x(d.mass))
                 .attr('height', y.bandwidth())
-                .attr('fill', '#69b3a2');
+                .attr('fill', '#69b3a2')
+                .on('mouseover', function(event, d) {
+                    tooltip
+                        .style('display', 'block')
+                        .html(`
+                            <strong>Name:</strong> ${d.name}<br>
+                            <strong>Mass (g):</strong> ${d.mass}<br>
+                            <strong>Year:</strong> ${d.year}<br>
+                            <strong>Latitude:</strong> ${d.lat}<br>
+                            <strong>Longitude:</strong> ${d.long}
+                        `);
+                })
+                .on('mousemove', function(event) {
+                    tooltip
+                        .style('top', `${event.pageY + 10}px`)
+                        .style('left', `${event.pageX + 10}px`);
+                })
+                .on('mouseout', function() {
+                    tooltip.style('display', 'none');
+                });
 
             svg.append('g')
                 .attr('class', 'x-axis')
@@ -250,13 +299,13 @@
         function drawStackedBarChart() {
             const data = fellFoundData.map(d => ({
                 year: d.year,
-                finds: +d.finds,
-                falls: +d.falls
+                finds: +d.finds || 0,
+                falls: +d.falls || 0
             }));
 
             const svg = d3.select('.stacked-bar-chart').append('svg')
                 .attr('width', '100%')
-                .attr('height', '100%');
+                .attr('height', '100%'); // Adjust height based on the chart container height
 
             const x = d3.scaleBand()
                 .domain(data.map(d => d.year))
@@ -299,7 +348,8 @@
                 .call(d3.axisLeft(y));
         }
 
-        window.onload = loadData;
+        // Load and process data
+        loadData();
     </script>
 </body>
 </html>
