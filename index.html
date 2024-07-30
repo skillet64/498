@@ -35,10 +35,10 @@
             border: 1px solid #444; /* Dark border */
         }
         .bar-found {
-            fill:rgb(247, 220, 111); /* yellow color for Found bars */
+            fill: rgb(247, 220, 111); /* Yellow color for Found bars */
         }
         .bar-fell {
-            fill: rgb(236, 240, 241)  ; /* White color for Fell bars */
+            fill: rgb(236, 240, 241); /* White color for Fell bars */
         }
         .scatter {
             fill: #ff4d4d; /* Red color for scatter points */
@@ -120,6 +120,9 @@
             });
             biggestData.sort((a, b) => b.mass - a.mass);
 
+            // Log processed data
+            console.log("Processed Biggest Data:", biggestData);
+
             const x1 = d3.scaleLinear()
                 .domain([0, d3.max(biggestData, d => d.mass)])
                 .range([0, width]);
@@ -144,7 +147,7 @@
                 .attr("y", d => y1(d.name))
                 .attr("width", d => x1(d.mass))
                 .attr("height", y1.bandwidth())
-                .style("fill", "#fff") // Set color to white for horizontal bars
+                .style("fill", "#fff") // Ensure this is white
                 .on("mouseover", function(event, d) {
                     tooltip
                         .style("display", "block")
@@ -167,29 +170,19 @@
                 .attr("class", "axis-label")
                 .attr("x", -margin.left)
                 .attr("y", -10)
-                .attr("fill", "#fff") // Set color to white for axis label
+                .attr("fill", "#fff") // Ensure axis label is white
                 .attr("text-anchor", "start")
                 .text("Meteorite Name");
 
-            // Add grid lines to the horizontal bar chart
-            horizontalSvg.append("g")
-                .attr("transform", `translate(${margin.left},${margin.top})`)
-                .attr("class", "grid")
-                .call(d3.axisBottom(x1)
-                    .ticks(10)
-                    .tickSize(-height)
-                    .tickFormat('')
-                );
-
             // Process the data for the stacked bar chart
             pivotData.forEach(d => {
-                d.Fell = +d.Fell || 0; // Number of meteorites that fell each year
-                d.Found = +d.Found || 0; // Number of meteorites found each year
-                d.year = d.fall; // Use fall as the year
+                d.Fell = +d.Fell || 0;
+                d.Found = +d.Found || 0;
+                d.year = d.fall;
                 if (d.year < 1399) {
-                d.year = 1399;
-            }
-                d['Grand Total'] = d.Fell + d.Found; // Total number of meteorites for each year
+                    d.year = 1399;
+                }
+                d['Grand Total'] = d.Fell + d.Found;
             });
 
             // Filter out data where year is "Unknown" or Grand Total is 0
@@ -207,7 +200,7 @@
                 d => Math.floor(d.year / binWidth) * binWidth
             );
 
-            // Convert the binned data into an array
+            // Convert binned data into an array
             const binnedArray = Array.from(binnedData, ([year, values]) => ({
                 year: `${year}-${year + binWidth - 1}`,
                 ...values
@@ -228,24 +221,24 @@
 
             const color = d3.scaleOrdinal()
                 .domain(['Fell', 'Found'])
-                .range(['#ff4d4d', '#00bfae']); // Red and Teal colors
+                .range([d3.schemeCategory10[0], d3.schemeCategory10[1]]);
 
             const stackedSvg = stackedContainer.append("svg")
                 .attr("width", width + margin.left + margin.right)
                 .attr("height", height + margin.top + margin.bottom)
                 .attr("class", "chart-svg");
 
-            const stackedData = d3.stack()
+            const stack = d3.stack()
                 .keys(['Fell', 'Found'])
-                (binnedArray);
+                .order(d3.stackOrderNone)
+                .offset(d3.stackOffsetNone);
 
-            // Log stacked data for debugging
-            console.log("Stacked Data:", stackedData);
+            const layers = stack(binnedArray);
 
             stackedSvg.append("g")
                 .attr("transform", `translate(${margin.left},${margin.top})`)
                 .selectAll(".layer")
-                .data(stackedData)
+                .data(layers)
                 .enter().append("g")
                 .attr("class", "layer")
                 .attr("fill", d => color(d.key))
@@ -259,7 +252,7 @@
                 .on("mouseover", function(event, d) {
                     tooltip
                         .style("display", "block")
-                        .html(`Year: ${d.data.year}<br>${d.key}: ${d[1] - d[0]}`);
+                        .html(`Year: ${d.data.year}<br>${d.key}: ${d[1] - d[0]} meteorites`);
                 })
                 .on("mousemove", function(event) {
                     tooltip
@@ -270,28 +263,31 @@
                     tooltip.style("display", "none");
                 });
 
-            // Add X and Y axes to the stacked bar chart
+            // Add X and Y axis to the stacked bar chart
             stackedSvg.append("g")
                 .attr("transform", `translate(${margin.left},${height + margin.top})`)
                 .call(d3.axisBottom(x2).tickSize(0))
                 .append("text")
                 .attr("class", "axis-label")
-                .attr("x", width)
-                .attr("y", margin.bottom - 10)
-                .attr("fill", "#fff") // Set color to white for axis label
-                .attr("text-anchor", "end")
+                .attr("x", width / 2)
+                .attr("y", 40)
+                .attr("fill", "#fff") // Ensure axis label is white
+                .attr("text-anchor", "middle")
                 .text("Year");
 
             stackedSvg.append("g")
                 .attr("transform", `translate(${margin.left},${margin.top})`)
-                .call(d3.axisLeft(y2).ticks(10, ".0s"))
+                .call(d3.axisLeft(y2))
                 .append("text")
                 .attr("class", "axis-label")
                 .attr("x", -margin.left)
                 .attr("y", -10)
-                .attr("fill", "#fff") // Set color to white for axis label
+                .attr("fill", "#fff") // Ensure axis label is white
                 .attr("text-anchor", "start")
                 .text("Number of Meteorites");
+
+        }).catch(error => {
+            console.error("Error loading data:", error);
         });
     </script>
 </body>
