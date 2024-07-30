@@ -9,7 +9,7 @@
         body {
             margin: 0;
             font-family: Arial, sans-serif;
-            background-color: #5D6D7E; /* Black background for space theme */
+            background-color: #5D6D7E; /* Background color */
             color: #fff; /* White text color */
         }
         .container {
@@ -32,13 +32,13 @@
             display: none;
         }
         svg {
-            border: 1px solid #444; /* Dark border for space theme */
+            border: 1px solid #444; /* Dark border */
         }
         .bar-found {
             fill: #F7DC6F; /* Teal color for Found bars */
         }
         .bar-fell {
-            fill: #fff; /* Red color for Fell bars */
+            fill: #fff; /* White color for Fell bars */
         }
         .scatter {
             fill: #ff4d4d; /* Red color for scatter points */
@@ -51,10 +51,6 @@
             font-size: 14px;
             font-weight: bold;
             fill: #fff; /* White color for axis labels */
-        }
-        .grid line {
-            stroke: #555; /* Nebula Gray */
-            stroke-width: 1px;
         }
         .chart-svg {
             margin-bottom: 20px;
@@ -293,16 +289,6 @@
                 .attr("fill", "#fff") // Set color to white for axis label
                 .attr("text-anchor", "start")
                 .text("Number of Meteorites");
-
-            // Add grid lines to the stacked bar chart
-            stackedSvg.append("g")
-                .attr("transform", `translate(${margin.left},${margin.top})`)
-                .attr("class", "grid")
-                .call(d3.axisLeft(y2)
-                    .ticks(10, ".0s")
-                    .tickSize(-width)
-                    .tickFormat('')
-                );
         });
     </script>
 </body>
