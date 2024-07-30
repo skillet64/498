@@ -40,6 +40,12 @@
         .bar-fell {
             fill: rgb(236, 240, 241); /* White color for Fell bars */
         }
+        .bar-hover-found {
+            fill: rgb(255, 223, 132); /* Light yellow for hover */
+        }
+        .bar-hover-fell {
+            fill: rgb(255, 255, 255); /* Light white for hover */
+        }
         .scatter {
             fill: #ff4d4d; /* Red color for scatter points */
         }
@@ -154,6 +160,8 @@
                 .attr("height", y1.bandwidth())
                 .style("fill", "#fff") // Ensure this is white
                 .on("mouseover", function(event, d) {
+                    d3.select(this)
+                        .style("fill", d => d.mass > 0 ? "rgb(255, 223, 132)" : "rgb(255, 255, 255)");
                     tooltip
                         .style("display", "block")
                         .html(`Name: ${d.name}<br>Mass: ${d.mass} g`);
@@ -164,6 +172,8 @@
                         .style("left", (event.pageX + 5) + "px");
                 })
                 .on("mouseout", function() {
+                    d3.select(this)
+                        .style("fill", d => d.mass > 0 ? "#fff" : "#fff");
                     tooltip.style("display", "none");
                 });
 
@@ -197,20 +207,21 @@
             // Convert the binned data into an array
             const binnedArray = Array.from(binnedData, ([year, values]) => ({
                 year: `${year}-${year + binWidth - 1}`,
-                ...values
+                Fell: values.Fell,
+                Found: values.Found,
+                GrandTotal: values.GrandTotal
             }));
 
-            // Log binned data for debugging
-            console.log("Binned Data:", binnedArray);
+            // Log the processed binned data
+            console.log("Processed Binned Data:", binnedArray);
 
             const x2 = d3.scaleBand()
                 .domain(binnedArray.map(d => d.year))
                 .range([0, width])
                 .padding(0.1);
 
-            const y2 = d3.scaleLinear()
-                .domain([0, d3.max(binnedArray, d => d.GrandTotal)])
-                .nice()
+            const y2 = d3.scaleLog() // Changed to log scale
+                .domain([1, d3.max(binnedArray, d => d.GrandTotal)]) // Ensure domain starts from 1
                 .range([height, 0]);
 
             const stackedSvg = stackedContainer.append("svg")
@@ -235,17 +246,17 @@
                 .enter().append("rect")
                 .attr("x", d => x2(d.data.year))
                 .attr("y", d => {
-                    // Handle the height calculation properly
                     const height = y2(d[0]) - y2(d[1]);
                     return isNaN(height) ? 0 : y2(d[1]);
                 })
                 .attr("width", x2.bandwidth())
                 .attr("height", d => {
-                    // Handle the height calculation properly
                     const height = y2(d[0]) - y2(d[1]);
                     return isNaN(height) ? 0 : height;
                 })
                 .on("mouseover", function(event, d) {
+                    d3.select(this)
+                        .style("fill", d3.select(this.parentNode).datum().key === "Found" ? "rgb(255, 223, 132)" : "rgb(255, 255, 255)");
                     tooltip
                         .style("display", "block")
                         .html(`Type: ${d3.select(this.parentNode).datum().key}<br>Count: ${d[1] - d[0]}`);
@@ -256,6 +267,8 @@
                         .style("left", (event.pageX + 5) + "px");
                 })
                 .on("mouseout", function() {
+                    d3.select(this)
+                        .style("fill", d3.select(this.parentNode).datum().key === "Found" ? "rgb(247, 220, 111)" : "rgb(236, 240, 241)");
                     tooltip.style("display", "none");
                 });
 
