@@ -200,7 +200,7 @@
                 d => Math.floor(d.year / binWidth) * binWidth
             );
 
-            // Convert binned data into an array
+            // Convert the binned data into an array
             const binnedArray = Array.from(binnedData, ([year, values]) => ({
                 year: `${year}-${year + binWidth - 1}`,
                 ...values
@@ -235,6 +235,9 @@
 
             const layers = stack(binnedArray);
 
+            // Log stacked data for debugging
+            console.log("Stacked Data:", layers);
+
             stackedSvg.append("g")
                 .attr("transform", `translate(${margin.left},${margin.top})`)
                 .selectAll(".layer")
@@ -246,13 +249,21 @@
                 .data(d => d)
                 .enter().append("rect")
                 .attr("x", d => x2(d.data.year))
-                .attr("y", d => y2(d[1]))
-                .attr("height", d => y2(d[0]) - y2(d[1]))
+                .attr("y", d => {
+                    const yValue = y2(d[1]);
+                    console.log(`y2(${d[1]}) = ${yValue}`); // Debugging y2(d[1])
+                    return yValue;
+                })
+                .attr("height", d => {
+                    const heightValue = y2(d[0]) - y2(d[1]);
+                    console.log(`y2(${d[0]}) - y2(${d[1]}) = ${heightValue}`); // Debugging height
+                    return heightValue;
+                })
                 .attr("width", x2.bandwidth())
                 .on("mouseover", function(event, d) {
                     tooltip
                         .style("display", "block")
-                        .html(`Year: ${d.data.year}<br>Year Total: ${d[1] - d[0]} meteorites`);
+                        .html(`Year: ${d.data.year}<br>${d.key}: ${d[1] - d[0]} meteorites`);
                 })
                 .on("mousemove", function(event) {
                     tooltip
