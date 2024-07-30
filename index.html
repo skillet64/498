@@ -252,7 +252,7 @@
                 .on("mouseover", function(event, d) {
                     tooltip
                         .style("display", "block")
-                        .html(`Year: ${d.data.year}<br>${d.key}: ${d[1] - d[0]} meteorites`);
+                        .html(`Year: ${d.data.year}<br>Year Total: ${d[1] - d[0]} meteorites`);
                 })
                 .on("mousemove", function(event) {
                     tooltip
