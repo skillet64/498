@@ -106,18 +106,23 @@
 
         // Load and process data
         Promise.all([
-            d3.csv('https://skillet64.github.io/498/biggest.csv'),
-            d3.csv('https://skillet64.github.io/498/ml-Meteorite_Landings Pivot-ml-Meteorite_Landings Pivot.csv')
+            d3.csv('https://skillet64.github.io/498/biggest.csv', d => ({
+                name: d.name,
+                mass: +d['mass (g) (Sum)'] // Ensure the mass is parsed as a number
+            })),
+            d3.csv('https://skillet64.github.io/498/ml-Meteorite_Landings Pivot-ml-Meteorite_Landings Pivot.csv', d => ({
+                year: +d.fall || 1399, // Use a default year if missing
+                Fell: +d.Fell || 0,    // Ensure numerical values
+                Found: +d.Found || 0,
+                'Grand Total': (+d.Fell || 0) + (+d.Found || 0)
+            }))
         ]).then(([biggestData, pivotData]) => {
-            
+
             // Log the raw data for debugging
             console.log("Biggest Data:", biggestData);
             console.log("Pivot Data:", pivotData);
 
             // Process the data for the horizontal bar chart
-            biggestData.forEach(d => {
-                d.mass = +d['mass (g) (Sum)'];
-            });
             biggestData.sort((a, b) => b.mass - a.mass);
 
             // Log processed data
@@ -175,17 +180,6 @@
                 .text("Meteorite Name");
 
             // Process the data for the stacked bar chart
-            pivotData.forEach(d => {
-                d.Fell = +d.Fell || 0;
-                d.Found = +d.Found || 0;
-                d.year = d.fall;
-                if (d.year < 1399) {
-                    d.year = 1399;
-                }
-                d['Grand Total'] = d.Fell + d.Found;
-            });
-
-            // Filter out data where year is "Unknown" or Grand Total is 0
             pivotData = pivotData.filter(d => d.year !== "Unknown" && d['Grand Total'] > 0);
 
             // Bin years into 10-year intervals
@@ -214,14 +208,10 @@
                 .range([0, width])
                 .padding(0.1);
 
-            const y2 = d3.scaleLog()
-                .domain([1, d3.max(binnedArray, d => d['GrandTotal'])])
+            const y2 = d3.scaleLinear()
+                .domain([0, d3.max(binnedArray, d => d.GrandTotal)])
                 .nice()
                 .range([height, 0]);
-
-            const color = d3.scaleOrdinal()
-                .domain(['Fell', 'Found'])
-                .range([d3.schemeCategory10[0], d3.schemeCategory10[1]]);
 
             const stackedSvg = stackedContainer.append("svg")
                 .attr("width", width + margin.left + margin.right)
@@ -229,41 +219,36 @@
                 .attr("class", "chart-svg");
 
             const stack = d3.stack()
-                .keys(['Fell', 'Found'])
-                .order(d3.stackOrderNone)
-                .offset(d3.stackOffsetNone);
+                .keys(["Found", "Fell"]);
 
-            const layers = stack(binnedArray);
-
-            // Log stacked data for debugging
-            console.log("Stacked Data:", layers);
+            const series = stack(binnedArray);
 
             stackedSvg.append("g")
                 .attr("transform", `translate(${margin.left},${margin.top})`)
                 .selectAll(".layer")
-                .data(layers)
+                .data(series)
                 .enter().append("g")
                 .attr("class", "layer")
-                .attr("fill", d => color(d.key))
+                .attr("fill", d => d.key === "Found" ? "rgb(247, 220, 111)" : "rgb(236, 240, 241)")
                 .selectAll("rect")
                 .data(d => d)
                 .enter().append("rect")
                 .attr("x", d => x2(d.data.year))
                 .attr("y", d => {
-                    const yValue = y2(d[1]);
-                    console.log(`y2(${d[1]}) = ${yValue}`); // Debugging y2(d[1])
-                    return yValue;
-                })
-                .attr("height", d => {
-                    const heightValue = y2(d[0]) - y2(d[1]);
-                    console.log(`y2(${d[0]}) - y2(${d[1]}) = ${heightValue}`); // Debugging height
-                    return heightValue;
+                    // Handle the height calculation properly
+                    const height = y2(d[0]) - y2(d[1]);
+                    return isNaN(height) ? 0 : y2(d[1]);
                 })
                 .attr("width", x2.bandwidth())
+                .attr("height", d => {
+                    // Handle the height calculation properly
+                    const height = y2(d[0]) - y2(d[1]);
+                    return isNaN(height) ? 0 : height;
+                })
                 .on("mouseover", function(event, d) {
                     tooltip
                         .style("display", "block")
-                        .html(`Year: ${d.data.year}<br>${d.key}: ${d[1] - d[0]} meteorites`);
+                        .html(`Type: ${d3.select(this.parentNode).datum().key}<br>Count: ${d[1] - d[0]}`);
                 })
                 .on("mousemove", function(event) {
                     tooltip
@@ -282,7 +267,7 @@
                 .attr("class", "axis-label")
                 .attr("x", width / 2)
                 .attr("y", 40)
-                .attr("fill", "#fff") // Ensure axis label is white
+                .attr("fill", "#fff")
                 .attr("text-anchor", "middle")
                 .text("Year");
 
@@ -293,12 +278,9 @@
                 .attr("class", "axis-label")
                 .attr("x", -margin.left)
                 .attr("y", -10)
-                .attr("fill", "#fff") // Ensure axis label is white
+                .attr("fill", "#fff")
                 .attr("text-anchor", "start")
-                .text("Number of Meteorites");
-
-        }).catch(error => {
-            console.error("Error loading data:", error);
+                .text("Count");
         });
     </script>
 </body>
