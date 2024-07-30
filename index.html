@@ -186,6 +186,9 @@
                 d.Fell = +d.Fell || 0; // Number of meteorites that fell each year
                 d.Found = +d.Found || 0; // Number of meteorites found each year
                 d.year = d.fall; // Use fall as the year
+                if (d.year < 1399) {
+                d.year = 1399;
+            }
                 d['Grand Total'] = d.Fell + d.Found; // Total number of meteorites for each year
             });
 
