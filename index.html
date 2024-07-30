@@ -9,7 +9,7 @@
         body {
             margin: 0;
             font-family: Arial, sans-serif;
-            background-color: #90A4AE; /* Black background for space theme */
+            background-color: #5D6D7E; /* Black background for space theme */
             color: #fff; /* White text color */
         }
         .container {
@@ -35,10 +35,10 @@
             border: 1px solid #444; /* Dark border for space theme */
         }
         .bar-found {
-            fill: #00bfae; /* Teal color for Found bars */
+            fill: #F4D03F; /* Teal color for Found bars */
         }
         .bar-fell {
-            fill: #ff4d4d; /* Red color for Fell bars */
+            fill: #85C1E9; /* Red color for Fell bars */
         }
         .scatter {
             fill: #ff4d4d; /* Red color for scatter points */
@@ -222,8 +222,8 @@
                 .range([0, width])
                 .padding(0.1);
 
-            const y2 = d3.scaleLinear()
-                .domain([0, d3.max(binnedArray, d => d['GrandTotal'])])
+            const y2 = d3.scaleLog()
+                .domain([1, d3.max(binnedArray, d => d['GrandTotal'])])
                 .nice()
                 .range([height, 0]);
 
@@ -285,7 +285,7 @@
 
             stackedSvg.append("g")
                 .attr("transform", `translate(${margin.left},${margin.top})`)
-                .call(d3.axisLeft(y2).ticks(10))
+                .call(d3.axisLeft(y2).ticks(10, ".0s"))
                 .append("text")
                 .attr("class", "axis-label")
                 .attr("x", -margin.left)
@@ -299,7 +299,7 @@
                 .attr("transform", `translate(${margin.left},${margin.top})`)
                 .attr("class", "grid")
                 .call(d3.axisLeft(y2)
-                    .ticks(10)
+                    .ticks(10, ".0s")
                     .tickSize(-width)
                     .tickFormat('')
                 );
