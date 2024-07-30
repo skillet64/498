@@ -196,7 +196,7 @@
             pivotData = pivotData.filter(d => d.year !== "Unknown" && d['Grand Total'] > 0);
 
             // Bin years into 10-year intervals
-            const binWidth = 10;
+            const binWidth = 100;
             const binnedData = d3.rollup(
                 pivotData,
                 v => ({
