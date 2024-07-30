@@ -204,7 +204,6 @@
                 d => Math.floor(d.year / binWidth) * binWidth
             );
 
-            // Convert the binned data into an array
             const binnedArray = Array.from(binnedData, ([year, values]) => ({
                 year: `${year}-${year + binWidth - 1}`,
                 Fell: values.Fell,
@@ -220,7 +219,7 @@
                 .range([0, width])
                 .padding(0.1);
 
-            const y2 = d3.scaleLog() // Changed to log scale
+            const y2 = d3.scaleLog()
                 .domain([1, d3.max(binnedArray, d => d.GrandTotal)]) // Ensure domain starts from 1
                 .range([height, 0]);
 
