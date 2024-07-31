@@ -313,7 +313,7 @@
 
             globeSvg.append("g")
                 .selectAll(".scatter")
-                .data(meteorites.filter(d => !isNaN(d.lat) && !isNaN(d.lon)))
+                .data(meteorites)
                 .enter().append("circle")
                 .attr("class", "scatter")
                 .attr("r", 3)
