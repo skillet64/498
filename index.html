@@ -187,13 +187,14 @@
             // Process the data for the stacked bar chart
             pivotData = pivotData.filter(d => d.year !== "Unknown" && d['Grand Total'] > 0);
 
-            // Bin years into 10-year intervals
-            const binWidth = 10;
+            // Bin years into 100-year intervals
+            const binWidth = 100;
             const binnedData = d3.group(
                 pivotData,
                 d => Math.floor(d.year / binWidth) * binWidth
             );
 
+            // Create the binned array with aggregated totals
             const binnedArray = Array.from(binnedData, ([year, values]) => ({
                 year: `${year}-${year + binWidth - 1}`,
                 Fell: d3.sum(values, d => d.Fell),
@@ -204,6 +205,7 @@
             // Log the processed binned data
             console.log("Processed Binned Data:", binnedArray);
 
+            // Define the scales for the stacked bar chart
             const x2 = d3.scaleBand()
                 .domain(binnedArray.map(d => d.year))
                 .range([0, width])
@@ -226,12 +228,18 @@
             const stackedG = stackedSvg.append("g")
                 .attr("transform", `translate(${margin.left},${margin.top})`);
 
+            // Define the stack layout
             const stack = d3.stack()
                 .keys(['Found', 'Fell'])
                 .order(d3.stackOrderNone)
                 .offset(d3.stackOffsetNone);
 
-            const series = stack(binnedArray);
+            // Create the series with conditional bars based on non-zero values
+            const series = stack(binnedArray.map(d => ({
+                year: d.year,
+                Found: d.Found > 0 ? d.Found : null,
+                Fell: d.Fell > 0 ? d.Fell : null
+            })));
 
             // Add X axis to the stacked bar chart
             stackedG.append("g")
@@ -263,33 +271,19 @@
                 .attr("class", "layer")
                 .attr("fill", d => color(d.key))
                 .selectAll("rect")
-                .data(d => d)
+                .data(d => d.filter(d => d[1] - d[0] > 0)) // Filter out zero-height bars
                 .enter().append("rect")
                 .attr("x", d => x2(d.data.year))
-                .attr("y", d => {
-                    const height = y2(d[0]) - y2(d[1]);
-                    // Log problematic data points
-                    if (isNaN(height) || height < 0) {
-                        console.error(`Problematic Data Point: Year=${d.data.year}, Height=${height}, Y=${y2(d[1])}`);
-                    }
-                    return isNaN(height) || height < 0 ? height : y2(d[1]);
-                })
+                .attr("y", d => y2(d[1]))
                 .attr("width", x2.bandwidth())
-                .attr("height", d => {
-                    const height = y2(d[0]) - y2(d[1]);
-                    // Log problematic data points
-                    if (isNaN(height) || height < 0) {
-                        console.error(`Problematic Data Point: Year=${d.data.year}, Height=${height}, Y=${y2(d[1])}`);
-                    }
-                    return isNaN(height) || height < 0 ? 0 : height;
-                })
+                .attr("height", d => y2(d[0]) - y2(d[1]))
                 .style("fill", d => color(d.key))
                 .on("mouseover", function(event, d) {
                     d3.select(this)
                         .style("fill", d.key === 'Found' ? 'rgb(255, 223, 132)' : 'rgb(255, 255, 255)');
                     tooltip
                         .style("display", "block")
-                        .html(`Year: ${d.data.year}<br>${d.key}: ${d[1] - d[0]}`);
+                        .html(`Year Range: ${d.data.year}<br>${d.key}: ${d[1] - d[0]}`);
                 })
                 .on("mousemove", function(event) {
                     tooltip
