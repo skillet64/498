@@ -199,8 +199,8 @@
             // Process the data for the stacked bar chart
             pivotData = pivotData.filter(d => d.year !== "Unknown" && d['Grand Total'] > 0);
 
-            // Bin years into 10-year intervals
-            const binWidth = 10;
+            // Bin years into 100-year intervals
+            const binWidth = 100;
             const binnedData = d3.group(
                 pivotData,
                 d => Math.floor(d.year / binWidth) * binWidth
@@ -214,20 +214,20 @@
             }));
 
             // Log the processed binned data
-            console.log("Binned Data:", binnedArray);
+            console.log("Processed Binned Data:", binnedArray);
 
             const x2 = d3.scaleBand()
                 .domain(binnedArray.map(d => d.year))
                 .range([0, width])
-                .padding(0.1);
+                .padding(0.2);
 
             const y2 = d3.scaleLog()
-                .domain([1, d3.max(binnedArray, d => d['GrandTotal'])])
+                .domain([1, d3.max(binnedArray, d => d.GrandTotal)])
                 .nice()
                 .range([height, 0]);
 
             const color = d3.scaleOrdinal()
-                .domain(['Fell', 'Found'])
+                .domain(['Found', 'Fell'])
                 .range(['#1f77b4', '#ff7f0e']);
 
             const stackedSvg = stackedContainer.append("svg")
@@ -280,17 +280,17 @@
                 .attr("x", d => x2(d.data.year))
                 .attr("y", d => {
                     const height = y2(d[0]) - y2(d[1]);
-                    return isNaN(height) ? height : y2(d[1]);
+                    return isNaN(height) || height < 0 ? height : y2(d[1]);
                 })
                 .attr("width", x2.bandwidth())
                 .attr("height", d => {
                     const height = y2(d[0]) - y2(d[1]);
-                    return isNaN(height) ? 0 : height;
+                    return isNaN(height) || height < 0 ? 0 : height;
                 })
                 .style("fill", d => color(d.key))
                 .on("mouseover", function(event, d) {
                     d3.select(this)
-                        .style("fill", d => d.key === 'Found' ? 'rgb(255, 223, 132)' : 'rgb(255, 255, 255)');
+                        .style("fill", d.key === 'Found' ? 'rgb(255, 223, 132)' : 'rgb(255, 255, 255)');
                     tooltip
                         .style("display", "block")
                         .html(`Year: ${d.data.year}<br>${d.key}: ${d[1] - d[0]}`);
