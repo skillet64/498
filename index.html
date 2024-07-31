@@ -67,6 +67,7 @@
         }
     </style>
 </head>
+    <h1>Meteorite Data Visualizations</h1>
 <body>
     <div class="container">
         <div class="text-content">
@@ -193,22 +194,17 @@
             pivotData = pivotData.filter(d => d.year !== "Unknown" && d['Grand Total'] > 0);
 
             // Bin years into 10-year intervals
-            const binWidth = 100;
-            const binnedData = d3.rollup(
+            const binWidth = 10;
+            const binnedData = d3.group(
                 pivotData,
-                v => ({
-                    Fell: d3.sum(v, d => d.Fell),
-                    Found: d3.sum(v, d => d.Found),
-                    GrandTotal: d3.sum(v, d => d['Grand Total'])
-                }),
                 d => Math.floor(d.year / binWidth) * binWidth
             );
 
             const binnedArray = Array.from(binnedData, ([year, values]) => ({
                 year: `${year}-${year + binWidth - 1}`,
-                Fell: values.Fell,
-                Found: values.Found,
-                GrandTotal: values.GrandTotal
+                Fell: d3.sum(values, d => d.Fell),
+                Found: d3.sum(values, d => d.Found),
+                GrandTotal: d3.sum(values, d => d['Grand Total'])
             }));
 
             // Log the processed binned data
