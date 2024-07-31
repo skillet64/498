@@ -46,8 +46,8 @@
         .bar-hover {
             fill: #fff; /* White for hover effect */
         }
-        .scatter {
-            fill: #F1C40F; /* Yellow for scatter points */
+        .stacked-bar {
+            fill: #F1C40F; /* Yellow for stacked bars */
         }
         .label {
             font-size: 12px;
@@ -117,6 +117,13 @@
             <!-- Legend will be appended here -->
         </div>
     </div>
+    <div class="container">
+        <div class="text-content">
+            <h2>Meteorite Landings Around the Globe</h2>
+            <p>Below is a globe showing locations where meteorites have landed. Hover over the points to see details.</p>
+        </div>
+        <!-- Globe container removed -->
+    </div>
     <div class="tooltip"></div>
     <script>
         // Define dimensions and margins
@@ -156,8 +163,10 @@
                 name: d.name,
                 lat: +d.reclat,
                 lon: +d.reclong
-            }))
-        ]).then(([biggestData, pivotData, meteorites]) => {
+            })),
+            d3.json('https://skillet64.github.io/498/land-110m.json'),
+            d3.json('https://skillet64.github.io/498/land-50m.json')
+        ]).then(([biggestData, pivotData, meteorites, land110m, land50m]) => {
             // Process data for horizontal bar chart
             biggestData.sort((a, b) => b.mass - a.mass);
 
@@ -247,10 +256,10 @@
 
             stackedSvg.append("g")
                 .attr("transform", `translate(${margin.left},${margin.top})`)
-                .selectAll(".bar")
+                .selectAll(".stacked-bar")
                 .data(bins)
                 .enter().append("rect")
-                .attr("class", "bar")
+                .attr("class", "stacked-bar")
                 .attr("x", d => x2(`${d.x0}-${d.x1}`))
                 .attr("y", d => y2(d3.sum(d, e => e['Grand Total'])))
                 .attr("width", x2.bandwidth())
@@ -285,4 +294,12 @@
                 .selectAll(".legend-item")
                 .data([
                     { color: colorScheme.bar, text: 'Heaviest Meteorites' },
-            
+                    { color: colorScheme.scatter, text: 'Meteorite Landings' }
+                ])
+                .enter().append("div")
+                .attr("class", "legend-item")
+                .html(d => `<div class="legend-color" style="background-color: ${d.color};"></div><div class="legend-text">${d.text}</div>`);
+        });
+    </script>
+</body>
+</html>
