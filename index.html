@@ -9,8 +9,8 @@
         body {
             margin: 0;
             font-family: Arial, sans-serif;
-            background-color: #5D6D7E; /* Background color */
-            color: #fff; /* White text color */
+            background-color: #5D6D7E;
+            color: #fff;
         }
         .container {
             display: flex;
@@ -32,39 +32,44 @@
             display: none;
         }
         svg {
-            border: 1px solid #444; /* Dark border */
+            border: 1px solid #444;
         }
         .bar-found {
-            fill: rgb(247, 220, 111); /* Yellow color for Found bars */
+            fill: rgb(247, 220, 111);
         }
         .bar-fell {
-            fill: rgb(236, 240, 241); /* White color for Fell bars */
+            fill: rgb(236, 240, 241);
         }
         .bar-hover-found {
-            fill: rgb(255, 223, 132); /* Light yellow for hover */
+            fill: rgb(255, 223, 132);
         }
         .bar-hover-fell {
-            fill: rgb(255, 255, 255); /* Light white for hover */
+            fill: rgb(255, 255, 255);
         }
         .scatter {
-            fill: #ff4d4d; /* Red color for scatter points */
+            fill: #ff4d4d;
         }
         .label {
             font-size: 12px;
-            fill: #fff; /* White color for labels */
+            fill: #fff;
         }
         .axis-label {
             font-size: 14px;
             font-weight: bold;
-            fill: #fff; /* White color for axis labels */
+            fill: #fff;
         }
         .chart-svg {
             margin-bottom: 20px;
         }
         #stacked-chart-container {
-            overflow-x: auto; /* Enable horizontal scrolling */
-            white-space: nowrap; /* Ensure the SVG does not wrap */
+            overflow-x: auto;
+            white-space: nowrap;
         }
+        h1{
+            text-align: center;
+            font-weight: bold;
+            color: #fff;
+          }
     </style>
 </head>
     <h1>Meteorite Data Visualizations</h1>
@@ -101,7 +106,7 @@
     <script>
         // Define dimensions and margins
         const margin = { top: 20, right: 20, bottom: 100, left: 150 },
-              width = 1500 - margin.left - margin.right, // Increased width for scrolling
+              width = 1500 - margin.left - margin.right,
               height = 600 - margin.top - margin.bottom;
 
         // Create SVG containers
@@ -159,7 +164,7 @@
                 .attr("y", d => y1(d.name))
                 .attr("width", d => x1(d.mass))
                 .attr("height", y1.bandwidth())
-                .style("fill", "#fff") // Ensure this is white
+                .style("fill", "#fff")
                 .on("mouseover", function(event, d) {
                     d3.select(this)
                         .style("fill", d => d.mass > 0 ? "rgb(255, 223, 132)" : "rgb(255, 255, 255)");
@@ -186,7 +191,7 @@
                 .attr("class", "axis-label")
                 .attr("x", -margin.left)
                 .attr("y", -10)
-                .attr("fill", "#fff") // Ensure axis label is white
+                .attr("fill", "#fff")
                 .attr("text-anchor", "start")
                 .text("Meteorite Name");
 
@@ -239,10 +244,11 @@
                 .selectAll("rect")
                 .data(d => d)
                 .enter().append("rect")
+                .attr("class", d => d.data.GrandTotal === 0 ? "bar-hidden" : "bar")
                 .attr("x", d => x2(d.data.year))
                 .attr("y", d => {
                     const height = y2(d[0]) - y2(d[1]);
-                    return isNaN(height) ? 0 : y2(d[1]);
+                    return isNaN(height) ? height : y2(d[1]);
                 })
                 .attr("width", x2.bandwidth())
                 .attr("height", d => {
