@@ -188,7 +188,7 @@
                 .attr("class", "chart-svg");
 
             const bars = horizontalSvg.append("g")
-                .attr("transform", `translate(${margin.left},${margin.top})`)
+                .attr("transform", translate(${margin.left},${margin.top}))
                 .selectAll(".bar")
                 .data(biggestData)
                 .enter().append("rect")
@@ -203,7 +203,7 @@
                         .style("fill", colorScheme.barHover);
                     tooltip
                         .style("display", "block")
-                        .html(`Name: ${d.name}<br>Mass: ${d.mass} g`);
+                        .html(Name: ${d.name}<br>Mass: ${d.mass} g);
                 })
                 .on("mousemove", function(event) {
                     tooltip
@@ -217,7 +217,7 @@
                 });
 
             horizontalSvg.append("g")
-                .attr("transform", `translate(${margin.left},${height + margin.top})`)
+                .attr("transform", translate(${margin.left},${height + margin.top}))
                 .call(d3.axisBottom(x1).ticks(10, ",.0s"))
                 .append("text")
                 .attr("class", "axis-label")
@@ -228,7 +228,7 @@
                 .text("Mass (g)");
 
             horizontalSvg.append("g")
-                .attr("transform", `translate(${margin.left},${margin.top})`)
+                .attr("transform", translate(${margin.left},${margin.top}))
                 .call(d3.axisLeft(y1))
                 .append("text")
                 .attr("class", "axis-label")
@@ -244,7 +244,7 @@
                 .thresholds(d3.range(1400, 2100, 100))(pivotData);
 
             const x2 = d3.scaleBand()
-                .domain(bins.map(b => `${b.x0}-${b.x1}`))
+                .domain(bins.map(b => ${b.x0}-${b.x1}))
                 .range([0, width])
                 .padding(0.2);
 
@@ -258,19 +258,19 @@
                 .attr("class", "chart-svg");
 
             stackedSvg.append("g")
-                .attr("transform", `translate(${margin.left},${margin.top})`)
+                .attr("transform", translate(${margin.left},${margin.top}))
                 .selectAll(".bar")
                 .data(bins)
                 .enter().append("rect")
                 .attr("class", "bar")
-                .attr("x", d => x2(`${d.x0}-${d.x1}`))
+                .attr("x", d => x2(${d.x0}-${d.x1}))
                 .attr("y", d => y2(d3.sum(d, e => e['Grand Total'])))
                 .attr("width", x2.bandwidth())
                 .attr("height", d => height - y2(d3.sum(d, e => e['Grand Total'])))
                 .style("fill", colorScheme.bar);
 
             stackedSvg.append("g")
-                .attr("transform", `translate(${margin.left},${height + margin.top})`)
+                .attr("transform", translate(${margin.left},${height + margin.top}))
                 .call(d3.axisBottom(x2))
                 .append("text")
                 .attr("class", "axis-label")
@@ -281,7 +281,7 @@
                 .text("Year (Bins)");
 
             stackedSvg.append("g")
-                .attr("transform", `translate(${margin.left},${margin.top})`)
+                .attr("transform", translate(${margin.left},${margin.top}))
                 .call(d3.axisLeft(y2))
                 .append("text")
                 .attr("class", "axis-label")
@@ -322,7 +322,7 @@
                 .on("mouseover", function(event, d) {
                     tooltip
                         .style("display", "block")
-                        .html(`Name: ${d.name}`);
+                        .html(Name: ${d.name});
                 })
                 .on("mousemove", function(event) {
                     tooltip
@@ -343,7 +343,7 @@
                 ])
                 .enter().append("div")
                 .attr("class", "legend-item")
-                .html(d => `<div class="legend-color" style="background-color: ${d.color};"></div><div class="legend-text">${d.text}</div>`);
+                .html(d => <div class="legend-color" style="background-color: ${d.color};"></div><div class="legend-text">${d.text}</div>);
         });
     </script>
 </body>
