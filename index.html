@@ -53,6 +53,9 @@
             display: none;
             font-size: 12px;
         }
+        .meteorite {
+            fill: #e74c3c;
+        }
     </style>
 </head>
 <body>
@@ -72,7 +75,8 @@
         const margin = {top: 20, right: 30, bottom: 40, left: 40};
         const colorScheme = {
             bar: '#3498db',
-            barHover: '#2980b9'
+            barHover: '#2980b9',
+            meteorite: '#e74c3c'
         };
 
         // Tooltip setup
@@ -85,15 +89,15 @@
                 mass: +d['mass (g) (Sum)'] || 0
             })),
             d3.csv('https://skillet64.github.io/498/ml-Meteorite_Landings Pivot-ml-Meteorite_Landings Pivot.csv', d => ({
-                year: +d.fall || 1399,
+                year: +d.year || 1399,
                 Fell: +d.Fell || 0,
                 Found: +d.Found || 0,
                 'Grand Total': (+d.Fell || 0) + (+d.Found || 0)
             })),
             d3.csv('https://skillet64.github.io/498/Sheet 1-ml-Meteorite_Landings.csv', d => ({
                 name: d.name,
-                lat: +d.reclat,
-                lon: +d.reclong
+                lat: +d.reclat || NaN,
+                lon: +d.reclong || NaN
             })),
             d3.json('https://skillet64.github.io/498/land-110m.json'),
             d3.json('https://skillet64.github.io/498/land-50m.json')
@@ -237,13 +241,13 @@
                 .attr("d", path);
 
             globeSvg.selectAll(".meteorite")
-                .data(meteorites)
+                .data(meteorites.filter(d => !isNaN(d.lat) && !isNaN(d.lon)))
                 .enter().append("circle")
                 .attr("class", "meteorite")
                 .attr("cx", d => projection([d.lon, d.lat])[0])
                 .attr("cy", d => projection([d.lon, d.lat])[1])
                 .attr("r", 2)
-                .style("fill", colorScheme.bar);
+                .style("fill", colorScheme.meteorite);
             
             // Legend
             const legend = d3.select("#legend");
@@ -257,6 +261,11 @@
                 .attr("class", "legend-item")
                 .style("background-color", colorScheme.barHover)
                 .text("Hover Highlight");
+
+            legend.append("div")
+                .attr("class", "legend-item")
+                .style("background-color", colorScheme.meteorite)
+                .text("Meteorite Locations");
 
         }).catch(error => console.error(error));
     </script>
