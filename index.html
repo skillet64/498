@@ -149,13 +149,13 @@
                 Found: +d.Found || 0,
                 'Grand Total': (+d.Fell || 0) + (+d.Found || 0)
             })),
-            d3.csv('path/to/ml-Meteorite_Landings.csv', d => ({
+            d3.csv('https://skillet64.github.io/498/Sheet 1-ml-Meteorite_Landings.csv', d => ({
                 name: d.name,
                 lat: +d.reclat,
                 lon: +d.reclong
             })),
-            d3.json('path/to/land-110m.json'),
-            d3.json('path/to/land-50m.json')
+            d3.json('https://skillet64.github.io/498/land-110m.json'),
+            d3.json('https://skillet64.github.io/498/land-50m.json')
         ]).then(([biggestData, pivotData, meteorites, land110m, land50m]) => {
             // Process data for horizontal bar chart
             biggestData.sort((a, b) => b.mass - a.mass);
