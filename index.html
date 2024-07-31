@@ -117,15 +117,6 @@
             <!-- Legend will be appended here -->
         </div>
     </div>
-    <div class="container">
-        <div class="text-content">
-            <h2>Meteorite Landings Around the Globe</h2>
-            <p>Below is a globe showing locations where meteorites have landed. Hover over the points to see details.</p>
-        </div>
-        <div id="globe-container">
-            <!-- Globe will be appended here -->
-        </div>
-    </div>
     <div class="tooltip"></div>
     <script>
         // Define dimensions and margins
@@ -144,7 +135,6 @@
         // Create SVG containers for charts
         const horizontalContainer = d3.select("#horizontal-chart-container");
         const stackedContainer = d3.select("#stacked-chart-container");
-        const globeContainer = d3.select("#globe-container");
         const legendContainer = d3.select("#legend-container");
 
         // Create a tooltip
@@ -166,10 +156,8 @@
                 name: d.name,
                 lat: +d.reclat,
                 lon: +d.reclong
-            })),
-            d3.json('https://skillet64.github.io/498/land-110m.json'),
-            d3.json('https://skillet64.github.io/498/land-50m.json')
-        ]).then(([biggestData, pivotData, meteorites, land110m, land50m]) => {
+            }))
+        ]).then(([biggestData, pivotData, meteorites]) => {
             // Process data for horizontal bar chart
             biggestData.sort((a, b) => b.mass - a.mass);
 
@@ -291,60 +279,10 @@
                 .attr("fill", "#fff")
                 .text("Total");
 
-            // Process data for globe chart
-            const projection = d3.geoOrthographic()
-                .scale(250)
-                .translate([width / 2, height / 2])
-                .clipAngle(90);
-
-            const path = d3.geoPath().projection(projection);
-
-            const globeSvg = globeContainer.append("svg")
-                .attr("width", width)
-                .attr("height", height);
-
-            globeSvg.append("g")
-                .selectAll(".land")
-                .data(land110m.features)
-                .enter().append("path")
-                .attr("class", "land")
-                .attr("d", path)
-                .style("fill", "#555");
-
-            globeSvg.append("g")
-                .selectAll(".scatter")
-                .data(meteorites)
-                .enter().append("circle")
-                .attr("class", "scatter")
-                .attr("r", 3)
-                .attr("cx", d => projection([d.lon, d.lat])[0])
-                .attr("cy", d => projection([d.lon, d.lat])[1])
-                .on("mouseover", function(event, d) {
-                    tooltip
-                        .style("display", "block")
-                        .html(`Name: ${d.name}`);
-                })
-                .on("mousemove", function(event) {
-                    tooltip
-                        .style("top", (event.pageY + 5) + "px")
-                        .style("left", (event.pageX + 5) + "px");
-                })
-                .on("mouseout", function() {
-                    tooltip.style("display", "none");
-                });
-
             // Add legend
             legendContainer.append("div")
                 .attr("class", "legend")
                 .selectAll(".legend-item")
                 .data([
                     { color: colorScheme.bar, text: 'Heaviest Meteorites' },
-                    { color: colorScheme.scatter, text: 'Meteorite Landings' }
-                ])
-                .enter().append("div")
-                .attr("class", "legend-item")
-                .html(d => `<div class="legend-color" style="background-color: ${d.color};"></div><div class="legend-text">${d.text}</div>`);
-        });
-    </script>
-</body>
-</html>
+            
