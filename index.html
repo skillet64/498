@@ -162,12 +162,12 @@
                 .attr("height", height + margin.top + margin.bottom)
                 .attr("class", "chart-svg");
 
-            horizontalSvg.append("g")
+            const bars = horizontalSvg.append("g")
                 .attr("transform", `translate(${margin.left},${margin.top})`)
                 .selectAll(".bar")
                 .data(biggestData)
                 .enter().append("rect")
-                .attr("class", "bar")
+                .attr("class", d => d.mass > 0 ? "bar bar-found" : "bar bar-fell")
                 .attr("x", 0)
                 .attr("y", d => y1(d.name))
                 .attr("width", d => x1(d.mass))
@@ -190,6 +190,30 @@
                         .style("fill", "#fff");
                     tooltip.style("display", "none");
                 });
+
+            // Add X axis to the horizontal bar chart
+            horizontalSvg.append("g")
+                .attr("transform", `translate(${margin.left},${height + margin.top})`)
+                .call(d3.axisBottom(x1).ticks(10, ",.0s"))
+                .append("text")
+                .attr("class", "axis-label")
+                .attr("x", width)
+                .attr("y", 40)
+                .attr("fill", "#fff")
+                .attr("text-anchor", "end")
+                .text("Mass (g)");
+
+            // Add Y axis to the horizontal bar chart
+            horizontalSvg.append("g")
+                .attr("transform", `translate(${margin.left},${margin.top})`)
+                .call(d3.axisLeft(y1))
+                .append("text")
+                .attr("class", "axis-label")
+                .attr("x", -margin.left)
+                .attr("y", -10)
+                .attr("fill", "#fff")
+                .attr("text-anchor", "start")
+                .text("Meteorite Name");
 
             // Process the data for the stacked bar chart
             pivotData = pivotData.filter(d => d.year !== "Unknown" && d['Grand Total'] > 0);
@@ -218,14 +242,14 @@
                 .range([0, width])
                 .padding(0.2);
 
-            const y2 = d3.scaleLinear()
+            const y2 = d3.scaleLinear() // Changed from log scale to linear scale
                 .domain([0, d3.max(binnedArray, d => d.GrandTotal)])
                 .nice()
                 .range([height, 0]);
 
             const color = d3.scaleOrdinal()
                 .domain(['Found', 'Fell'])
-                .range(['#1f77b4', '#ff7f0e']);
+                .range(['#1f77b4', '#ff7f0e']); // Distinct colors for 'Found' and 'Fell'
 
             const stackedSvg = stackedContainer.append("svg")
                 .attr("width", width + margin.left + margin.right)
@@ -241,7 +265,7 @@
                 .order(d3.stackOrderNone)
                 .offset(d3.stackOffsetNone);
 
-            // Create the series with conditional bars based on non-zero values
+            // Create the series
             const series = stack(binnedArray.map(d => ({
                 year: d.year,
                 Found: d.Found,
@@ -281,7 +305,7 @@
                 .data(d => d.filter(d => d[1] - d[0] > 0)) // Filter out zero-height bars
                 .enter().append("rect")
                 .attr("x", d => x2(d.data.year))
-                .attr("y", d => y2(d[1])) // Set the y position
+                .attr("y", d => y2(d[1]))
                 .attr("width", x2.bandwidth())
                 .attr("height", d => {
                     const rectHeight = y2(d[0]) - y2(d[1]); // Calculate height
@@ -329,7 +353,7 @@
                 .attr("y", (d, i) => i * 25 + 15)
                 .attr("class", "legend")
                 .text(d => d);
-                
+
         }).catch(error => console.error('Error loading or processing data:', error));
     </script>
 </body>
