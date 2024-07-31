@@ -3,134 +3,191 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Meteorite Visualizations</title>
+    <title>Meteorite Data Visualizations</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            background-color: #2c3e50;
-            color: #ecf0f1;
             margin: 0;
-            padding: 0;
+            font-family: Arial, sans-serif;
+            background-color: #2C3E50;
+            color: #fff;
+        }
+        h1 {
+            text-align: center;
+            font-weight: bold;
+            color: #fff;
+            margin: 20px;
         }
         .container {
-            width: 90%;
-            margin: 20px auto;
+            display: flex;
+            align-items: flex-start;
+            padding: 20px;
+            box-sizing: border-box;
         }
-        .chart-container {
-            margin-bottom: 40px;
+        .text-content {
+            width: 300px;
+            margin-right: 20px;
         }
-        .chart-svg {
-            background-color: #34495e;
-        }
-        .bar {
-            fill: #3498db;
-        }
-        .bar:hover {
-            fill: #2980b9;
-        }
-        .axis-label {
-            font-size: 12px;
-            fill: #ecf0f1;
-        }
-        .legend {
-            margin: 20px 0;
-        }
-        .legend-item {
-            display: inline-block;
-            width: 100px;
-            height: 20px;
-            margin-right: 10px;
-            color: #ecf0f1;
-            line-height: 20px;
-        }
-        #tooltip {
+        .tooltip {
             position: absolute;
-            background-color: #fff;
-            color: #000;
-            padding: 10px;
-            border-radius: 4px;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: #fff;
+            padding: 5px;
+            border-radius: 3px;
             pointer-events: none;
             display: none;
-            font-size: 12px;
         }
-        .meteorite {
-            fill: #e74c3c;
+        svg {
+            border: 1px solid #444;
+        }
+        .bar {
+            fill: #F1C40F; /* Yellow for bars */
+        }
+        .bar-hover {
+            fill: #fff; /* White for hover effect */
+        }
+        .scatter {
+            fill: #F1C40F; /* Yellow for scatter points */
+        }
+        .label {
+            font-size: 12px;
+            fill: #fff;
+        }
+        .axis-label {
+            font-size: 14px;
+            font-weight: bold;
+            fill: #fff;
+        }
+        .chart-svg {
+            margin-bottom: 20px;
+        }
+        #stacked-chart-container {
+            overflow-x: auto;
+            white-space: nowrap;
+        }
+        .legend {
+            font-size: 14px;
+            fill: #fff;
+        }
+        .legend rect {
+            stroke-width: 2px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
         }
     </style>
 </head>
 <body>
-    <div id="tooltip"></div>
+    <h1>Meteorite Data Visualizations</h1>
     <div class="container">
-        <div id="horizontal-chart" class="chart-container"></div>
-        <div id="stacked-chart" class="chart-container"></div>
-        <div id="globe" class="chart-container"></div>
-        <div id="legend" class="legend"></div>
+        <div class="text-content">
+            <h2>The Heaviest Meteorites Ever Recorded</h2>
+            <p>According to National Geographic, the largest meteorite ever discovered on Earth is the Hoba meteorite, found in Namibia in 1920. 
+                Weighing approximately 54,000 kilograms (119,000 pounds), the Hoba meteorite is so massive that it remains in its original location. 
+                Its enormous size and weight make it impossible to move, and it has been preserved exactly where it was discovered. 
+                This remarkable meteorite offers a unique opportunity to study an extraterrestrial object in its natural setting.
+            </p>
+        </div>
+        <div id="horizontal-chart-container">
+            <!-- Horizontal bar chart will be appended here -->
+        </div>
     </div>
-
-    <script src="https://d3js.org/d3.v7.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
+    <div class="container">
+        <div class="text-content">
+            <h2>Meteorite Discoveries Over Time</h2>
+            <p>
+                There are several factors contributing to the increase in meteorite finds over recent years. 
+                Primarily, climate change and advancements in transportation technology have played significant roles. 
+                The melting of Arctic ice has uncovered numerous meteorite specimens that were previously inaccessible. 
+                Additionally, our rapid technological progress has enabled us to retrieve meteorites from the Moon's craters. 
+                This combination of environmental and technological changes has greatly enhanced our ability to discover and study meteorites. 
+            </p>
+        </div>
+        <div id="stacked-chart-container">
+            <!-- Stacked bar chart will be appended here -->
+        </div>
+        <div id="legend-container">
+            <!-- Legend will be appended here -->
+        </div>
+    </div>
+    <div class="container">
+        <div class="text-content">
+            <h2>Meteorite Landings Around the Globe</h2>
+            <p>Below is a globe showing locations where meteorites have landed. Hover over the points to see details.</p>
+        </div>
+        <div id="globe-container">
+            <!-- Globe will be appended here -->
+        </div>
+    </div>
+    <div class="tooltip"></div>
     <script>
-        const width = 960;
-        const height = 500;
-        const margin = {top: 20, right: 30, bottom: 40, left: 40};
+        // Define dimensions and margins
+        const margin = { top: 20, right: 200, bottom: 100, left: 150 },
+              width = 1500 - margin.left - margin.right,
+              height = 600 - margin.top - margin.bottom;
+
+        // Define color scheme
         const colorScheme = {
-            bar: '#3498db',
-            barHover: '#2980b9',
-            meteorite: '#e74c3c'
+            bar: '#F1C40F',         // Yellow for bars
+            barHover: '#fff',       // White for hover effect
+            scatter: '#F1C40F',     // Yellow for scatter points
+            legend: '#fff'          // White for legend text
         };
 
-        // Tooltip setup
-        const tooltip = d3.select("#tooltip");
+        // Create SVG containers for charts
+        const horizontalContainer = d3.select("#horizontal-chart-container");
+        const stackedContainer = d3.select("#stacked-chart-container");
+        const globeContainer = d3.select("#globe-container");
+        const legendContainer = d3.select("#legend-container");
 
-        // Fetch data
+        // Create a tooltip
+        const tooltip = d3.select(".tooltip");
+
+        // Load and process data
         Promise.all([
             d3.csv('https://skillet64.github.io/498/biggest.csv', d => ({
                 name: d.name,
                 mass: +d['mass (g) (Sum)'] || 0
             })),
             d3.csv('https://skillet64.github.io/498/ml-Meteorite_Landings Pivot-ml-Meteorite_Landings Pivot.csv', d => ({
-                year: +d.year || 1399,
+                year: +d.fall || 1399,
                 Fell: +d.Fell || 0,
                 Found: +d.Found || 0,
                 'Grand Total': (+d.Fell || 0) + (+d.Found || 0)
             })),
             d3.csv('https://skillet64.github.io/498/Sheet 1-ml-Meteorite_Landings.csv', d => ({
                 name: d.name,
-                lat: +d.reclat || NaN,
-                lon: +d.reclong || NaN
+                lat: +d.reclat,
+                lon: +d.reclong
             })),
-            d3.json('https://skillet64.github.io/498/land-110m.json').catch(error => {
-                console.error("Failed to load land-110m.json:", error);
-                return { objects: {} };
-            }),
-            d3.json('https://skillet64.github.io/498/land-50m.json').catch(error => {
-                console.error("Failed to load land-50m.json:", error);
-                return { objects: {} };
-            })
+            d3.json('https://skillet64.github.io/498/land-110m.json'),
+            d3.json('https://skillet64.github.io/498/land-50m.json')
         ]).then(([biggestData, pivotData, meteorites, land110m, land50m]) => {
-            if (!land110m.objects || !land110m.objects.land) {
-                console.error("Invalid land data:", land110m);
-                return;
-            }
-
-            // Horizontal Bar Chart
+            // Process data for horizontal bar chart
             biggestData.sort((a, b) => b.mass - a.mass);
 
             const x1 = d3.scaleLinear()
                 .domain([0, d3.max(biggestData, d => d.mass)])
-                .range([0, width - margin.left - margin.right]);
+                .range([0, width]);
 
             const y1 = d3.scaleBand()
                 .domain(biggestData.map(d => d.name))
-                .range([0, height - margin.top - margin.bottom])
+                .range([0, height])
                 .padding(0.1);
 
-            const horizontalSvg = d3.select("#horizontal-chart").append("svg")
-                .attr("width", width)
-                .attr("height", height)
+            const horizontalSvg = horizontalContainer.append("svg")
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom)
                 .attr("class", "chart-svg");
 
-            horizontalSvg.append("g")
+            const bars = horizontalSvg.append("g")
                 .attr("transform", `translate(${margin.left},${margin.top})`)
                 .selectAll(".bar")
                 .data(biggestData)
@@ -142,7 +199,8 @@
                 .attr("height", y1.bandwidth())
                 .style("fill", colorScheme.bar)
                 .on("mouseover", function(event, d) {
-                    d3.select(this).style("fill", colorScheme.barHover);
+                    d3.select(this)
+                        .style("fill", colorScheme.barHover);
                     tooltip
                         .style("display", "block")
                         .html(`Name: ${d.name}<br>Mass: ${d.mass} g`);
@@ -153,19 +211,20 @@
                         .style("left", (event.pageX + 5) + "px");
                 })
                 .on("mouseout", function() {
-                    d3.select(this).style("fill", colorScheme.bar);
+                    d3.select(this)
+                        .style("fill", colorScheme.bar);
                     tooltip.style("display", "none");
                 });
 
             horizontalSvg.append("g")
-                .attr("transform", `translate(${margin.left},${height - margin.bottom})`)
+                .attr("transform", `translate(${margin.left},${height + margin.top})`)
                 .call(d3.axisBottom(x1).ticks(10, ",.0s"))
                 .append("text")
                 .attr("class", "axis-label")
-                .attr("x", width - margin.left - margin.right)
+                .attr("x", width)
                 .attr("y", 40)
+                .attr("fill", "#fff")
                 .attr("text-anchor", "end")
-                .attr("fill", "#ecf0f1")
                 .text("Mass (g)");
 
             horizontalSvg.append("g")
@@ -176,26 +235,26 @@
                 .attr("x", -40)
                 .attr("y", -10)
                 .attr("text-anchor", "end")
-                .attr("fill", "#ecf0f1")
+                .attr("fill", "#fff")
                 .text("Meteorite Name");
 
-            // Stacked Bar Chart
+            // Process data for stacked bar chart with 100-year bins
             const bins = d3.bin()
                 .value(d => d.year)
                 .thresholds(d3.range(1400, 2100, 100))(pivotData);
 
             const x2 = d3.scaleBand()
                 .domain(bins.map(b => `${b.x0}-${b.x1}`))
-                .range([0, width - margin.left - margin.right])
+                .range([0, width])
                 .padding(0.2);
 
             const y2 = d3.scaleLinear()
                 .domain([0, d3.max(pivotData, d => d['Grand Total'])])
-                .range([height - margin.top - margin.bottom, 0]);
+                .range([height, 0]);
 
-            const stackedSvg = d3.select("#stacked-chart").append("svg")
-                .attr("width", width)
-                .attr("height", height)
+            const stackedSvg = stackedContainer.append("svg")
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom)
                 .attr("class", "chart-svg");
 
             stackedSvg.append("g")
@@ -207,18 +266,18 @@
                 .attr("x", d => x2(`${d.x0}-${d.x1}`))
                 .attr("y", d => y2(d3.sum(d, e => e['Grand Total'])))
                 .attr("width", x2.bandwidth())
-                .attr("height", d => height - margin.top - margin.bottom - y2(d3.sum(d, e => e['Grand Total'])))
+                .attr("height", d => height - y2(d3.sum(d, e => e['Grand Total'])))
                 .style("fill", colorScheme.bar);
 
             stackedSvg.append("g")
-                .attr("transform", `translate(${margin.left},${height - margin.bottom})`)
+                .attr("transform", `translate(${margin.left},${height + margin.top})`)
                 .call(d3.axisBottom(x2))
                 .append("text")
                 .attr("class", "axis-label")
-                .attr("x", width - margin.left - margin.right)
+                .attr("x", width)
                 .attr("y", 40)
                 .attr("text-anchor", "end")
-                .attr("fill", "#ecf0f1")
+                .attr("fill", "#fff")
                 .text("Year (Bins)");
 
             stackedSvg.append("g")
@@ -229,56 +288,63 @@
                 .attr("x", -40)
                 .attr("y", -10)
                 .attr("text-anchor", "end")
-                .attr("fill", "#ecf0f1")
-                .text("Number of Meteorites");
+                .attr("fill", "#fff")
+                .text("Total");
 
-            // Globe Visualization
+            // Process data for globe chart
             const projection = d3.geoOrthographic()
-                .scale(150)
+                .scale(250)
                 .translate([width / 2, height / 2])
-                .rotate([0, -30]);
+                .clipAngle(90);
 
             const path = d3.geoPath().projection(projection);
 
-            const globeSvg = d3.select("#globe").append("svg")
+            const globeSvg = globeContainer.append("svg")
                 .attr("width", width)
-                .attr("height", height)
-                .attr("class", "chart-svg");
+                .attr("height", height);
 
-            globeSvg.append("path")
-                .datum(topojson.feature(land110m, land110m.objects.land))
+            globeSvg.append("g")
+                .selectAll(".land")
+                .data(land110m.features)
+                .enter().append("path")
                 .attr("class", "land")
                 .attr("d", path)
                 .style("fill", "#555");
 
-            globeSvg.selectAll(".meteorite")
+            globeSvg.append("g")
+                .selectAll(".scatter")
                 .data(meteorites.filter(d => !isNaN(d.lat) && !isNaN(d.lon)))
                 .enter().append("circle")
-                .attr("class", "meteorite")
+                .attr("class", "scatter")
+                .attr("r", 3)
                 .attr("cx", d => projection([d.lon, d.lat])[0])
                 .attr("cy", d => projection([d.lon, d.lat])[1])
-                .attr("r", 2)
-                .style("fill", colorScheme.meteorite);
-            
-            // Legend
-            const legend = d3.select("#legend");
+                .on("mouseover", function(event, d) {
+                    tooltip
+                        .style("display", "block")
+                        .html(`Name: ${d.name}`);
+                })
+                .on("mousemove", function(event) {
+                    tooltip
+                        .style("top", (event.pageY + 5) + "px")
+                        .style("left", (event.pageX + 5) + "px");
+                })
+                .on("mouseout", function() {
+                    tooltip.style("display", "none");
+                });
 
-            legend.append("div")
+            // Add legend
+            legendContainer.append("div")
+                .attr("class", "legend")
+                .selectAll(".legend-item")
+                .data([
+                    { color: colorScheme.bar, text: 'Heaviest Meteorites' },
+                    { color: colorScheme.scatter, text: 'Meteorite Landings' }
+                ])
+                .enter().append("div")
                 .attr("class", "legend-item")
-                .style("background-color", colorScheme.bar)
-                .text("Meteorite Mass");
-
-            legend.append("div")
-                .attr("class", "legend-item")
-                .style("background-color", colorScheme.barHover)
-                .text("Hover Highlight");
-
-            legend.append("div")
-                .attr("class", "legend-item")
-                .style("background-color", colorScheme.meteorite)
-                .text("Meteorite Locations");
-
-        }).catch(error => console.error(error));
+                .html(d => `<div class="legend-color" style="background-color: ${d.color};"></div><div class="legend-text">${d.text}</div>`);
+        });
     </script>
 </body>
 </html>
