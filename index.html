@@ -71,6 +71,13 @@
             overflow-x: auto;
             white-space: nowrap;
         }
+        .legend {
+            font-size: 14px;
+            fill: #fff;
+        }
+        .legend rect {
+            stroke-width: 2px;
+        }
     </style>
 </head>
 <body>
@@ -106,7 +113,7 @@
     <div class="tooltip"></div>
     <script>
         // Define dimensions and margins
-        const margin = { top: 20, right: 20, bottom: 100, left: 150 },
+        const margin = { top: 20, right: 200, bottom: 100, left: 150 },
               width = 1500 - margin.left - margin.right,
               height = 600 - margin.top - margin.bottom;
 
@@ -299,6 +306,30 @@
                     tooltip.style("display", "none");
                 });
 
+            // Add color legend
+            const legendWidth = 200;
+            const legendHeight = 100;
+            const legend = stackedSvg.append("g")
+                .attr("transform", `translate(${width + 20}, 0)`);
+
+            legend.selectAll("rect")
+                .data(color.domain())
+                .enter().append("rect")
+                .attr("x", 0)
+                .attr("y", (d, i) => i * 25)
+                .attr("width", 20)
+                .attr("height", 20)
+                .style("fill", d => color(d))
+                .style("stroke", "#fff");
+
+            legend.selectAll("text")
+                .data(color.domain())
+                .enter().append("text")
+                .attr("x", 30)
+                .attr("y", (d, i) => i * 25 + 15)
+                .attr("class", "legend")
+                .text(d => d);
+                
         }).catch(error => console.error('Error loading or processing data:', error));
     </script>
 </body>
