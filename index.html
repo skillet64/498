@@ -12,6 +12,12 @@
             background-color: #5D6D7E;
             color: #fff;
         }
+        h1 {
+            text-align: center;
+            font-weight: bold;
+            color: #fff;
+            margin: 20px;
+        }
         .container {
             display: flex;
             align-items: flex-start;
@@ -65,15 +71,10 @@
             overflow-x: auto;
             white-space: nowrap;
         }
-        h1{
-            text-align: center;
-            font-weight: bold;
-            color: #fff;
-          }
     </style>
 </head>
-    <h1>Meteorite Data Visualizations</h1>
 <body>
+    <h1>Meteorite Data Visualizations</h1>
     <div class="container">
         <div class="text-content">
             <h2>The Heaviest Meteorites Ever Recorded</h2>
@@ -167,7 +168,7 @@
                 .style("fill", "#fff")
                 .on("mouseover", function(event, d) {
                     d3.select(this)
-                        .style("fill", d => d.mass > 0 ? "rgb(255, 223, 132)" : "rgb(255, 255, 255)");
+                        .style("fill", d.mass > 0 ? "rgb(255, 223, 132)" : "rgb(255, 255, 255)");
                     tooltip
                         .style("display", "block")
                         .html(`Name: ${d.name}<br>Mass: ${d.mass} g`);
@@ -179,7 +180,7 @@
                 })
                 .on("mouseout", function() {
                     d3.select(this)
-                        .style("fill", d => d.mass > 0 ? "#fff" : "#fff");
+                        .style("fill", "#fff");
                     tooltip.style("display", "none");
                 });
 
@@ -213,7 +214,7 @@
             }));
 
             // Log the processed binned data
-            console.log("Processed Binned Data:", binnedArray);
+            console.log("Binned Data:", binnedArray);
 
             const x2 = d3.scaleBand()
                 .domain(binnedArray.map(d => d.year))
@@ -221,30 +222,61 @@
                 .padding(0.1);
 
             const y2 = d3.scaleLog()
-                .domain([1, d3.max(binnedArray, d => d.GrandTotal)]) // Ensure domain starts from 1
+                .domain([1, d3.max(binnedArray, d => d['GrandTotal'])])
+                .nice()
                 .range([height, 0]);
+
+            const color = d3.scaleOrdinal()
+                .domain(['Fell', 'Found'])
+                .range(['#1f77b4', '#ff7f0e']);
 
             const stackedSvg = stackedContainer.append("svg")
                 .attr("width", width + margin.left + margin.right)
                 .attr("height", height + margin.top + margin.bottom)
                 .attr("class", "chart-svg");
 
+            const stackedG = stackedSvg.append("g")
+                .attr("transform", `translate(${margin.left},${margin.top})`);
+
             const stack = d3.stack()
-                .keys(["Found", "Fell"]);
+                .keys(['Found', 'Fell'])
+                .order(d3.stackOrderNone)
+                .offset(d3.stackOffsetNone);
 
             const series = stack(binnedArray);
 
-            stackedSvg.append("g")
-                .attr("transform", `translate(${margin.left},${margin.top})`)
-                .selectAll(".layer")
+            // Add X axis to the stacked bar chart
+            stackedG.append("g")
+                .attr("transform", `translate(0,${height})`)
+                .call(d3.axisBottom(x2).tickSize(0))
+                .append("text")
+                .attr("class", "axis-label")
+                .attr("x", width)
+                .attr("y", 40)
+                .attr("fill", "#fff")
+                .attr("text-anchor", "end")
+                .text("Year Range");
+
+            // Add Y axis to the stacked bar chart
+            stackedG.append("g")
+                .call(d3.axisLeft(y2).ticks(10, ".0s"))
+                .append("text")
+                .attr("class", "axis-label")
+                .attr("x", -margin.left)
+                .attr("y", -10)
+                .attr("fill", "#fff")
+                .attr("text-anchor", "start")
+                .text("Meteorite Count");
+
+            // Add the stacked bars
+            stackedG.selectAll(".layer")
                 .data(series)
                 .enter().append("g")
                 .attr("class", "layer")
-                .attr("fill", d => d.key === "Found" ? "rgb(247, 220, 111)" : "rgb(236, 240, 241)")
+                .attr("fill", d => color(d.key))
                 .selectAll("rect")
                 .data(d => d)
                 .enter().append("rect")
-                .attr("class", d => d.data.GrandTotal === 0 ? "bar-hidden" : "bar")
                 .attr("x", d => x2(d.data.year))
                 .attr("y", d => {
                     const height = y2(d[0]) - y2(d[1]);
@@ -255,12 +287,13 @@
                     const height = y2(d[0]) - y2(d[1]);
                     return isNaN(height) ? 0 : height;
                 })
+                .style("fill", d => color(d.key))
                 .on("mouseover", function(event, d) {
                     d3.select(this)
-                        .style("fill", d3.select(this.parentNode).datum().key === "Found" ? "rgb(255, 223, 132)" : "rgb(255, 255, 255)");
+                        .style("fill", d => d.key === 'Found' ? 'rgb(255, 223, 132)' : 'rgb(255, 255, 255)');
                     tooltip
                         .style("display", "block")
-                        .html(`Type: ${d3.select(this.parentNode).datum().key}<br>Count: ${d[1] - d[0]}`);
+                        .html(`Year: ${d.data.year}<br>${d.key}: ${d[1] - d[0]}`);
                 })
                 .on("mousemove", function(event) {
                     tooltip
@@ -269,33 +302,11 @@
                 })
                 .on("mouseout", function() {
                     d3.select(this)
-                        .style("fill", d3.select(this.parentNode).datum().key === "Found" ? "rgb(247, 220, 111)" : "rgb(236, 240, 241)");
+                        .style("fill", d => color(d.key));
                     tooltip.style("display", "none");
                 });
 
-            // Add X and Y axis to the stacked bar chart
-            stackedSvg.append("g")
-                .attr("transform", `translate(${margin.left},${height + margin.top})`)
-                .call(d3.axisBottom(x2).tickSize(0))
-                .append("text")
-                .attr("class", "axis-label")
-                .attr("x", width / 2)
-                .attr("y", 40)
-                .attr("fill", "#fff")
-                .attr("text-anchor", "middle")
-                .text("Year");
-
-            stackedSvg.append("g")
-                .attr("transform", `translate(${margin.left},${margin.top})`)
-                .call(d3.axisLeft(y2))
-                .append("text")
-                .attr("class", "axis-label")
-                .attr("x", -margin.left)
-                .attr("y", -10)
-                .attr("fill", "#fff")
-                .attr("text-anchor", "start")
-                .text("Count");
-        });
+        }).catch(error => console.error('Error loading or processing data:', error));
     </script>
 </body>
 </html>
