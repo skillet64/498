@@ -283,7 +283,7 @@
                         .style("fill", d.key === 'Found' ? 'rgb(255, 223, 132)' : 'rgb(255, 255, 255)');
                     tooltip
                         .style("display", "block")
-                        .html(`Year Range: ${d.data.year}<br>${d.key}: ${d[1] - d[0]}`);
+                        .html(`Year Range: ${d.data.year}<br>Total: ${d[1] - d[0]}`);
                 })
                 .on("mousemove", function(event) {
                     tooltip
