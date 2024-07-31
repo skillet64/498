@@ -218,8 +218,8 @@
                 .range([0, width])
                 .padding(0.2);
 
-            const y2 = d3.scaleLog()
-                .domain([1, d3.max(binnedArray, d => d.GrandTotal)])
+            const y2 = d3.scaleLinear()
+                .domain([0, d3.max(binnedArray, d => d.GrandTotal)])
                 .nice()
                 .range([height, 0]);
 
@@ -244,8 +244,8 @@
             // Create the series with conditional bars based on non-zero values
             const series = stack(binnedArray.map(d => ({
                 year: d.year,
-                Found: d.Found > 0 ? d.Found : 0, // Ensure zero for non-existent data
-                Fell: d.Fell > 0 ? d.Fell : 0
+                Found: d.Found,
+                Fell: d.Fell
             })));
 
             // Add X axis to the stacked bar chart
@@ -310,7 +310,7 @@
             const legendWidth = 200;
             const legendHeight = 100;
             const legend = stackedSvg.append("g")
-                .attr("transform", `translate(${width + 20}, 0)`);
+                .attr("transform", `translate(${width + 20}, 20)`); // Move legend to the other side
 
             legend.selectAll("rect")
                 .data(color.domain())
