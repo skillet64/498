@@ -128,7 +128,7 @@
         Promise.all([
             d3.csv('https://skillet64.github.io/498/biggest.csv', d => ({
                 name: d.name,
-                mass: +d['mass (g) (Sum)'] // Ensure the mass is parsed as a number
+                mass: +d['mass (g) (Sum)'] || 0 // Ensure mass is parsed as a number, default to 0 if missing
             })),
             d3.csv('https://skillet64.github.io/498/ml-Meteorite_Landings Pivot-ml-Meteorite_Landings Pivot.csv', d => ({
                 year: +d.fall || 1399, // Use a default year if missing
@@ -302,7 +302,7 @@
                 .attr("class", "layer")
                 .attr("fill", d => color(d.key))
                 .selectAll("rect")
-                .data(d => d.filter(d => d[1] - d[0] > 0)) // Filter out zero-height bars
+                .data(d => d)
                 .enter().append("rect")
                 .attr("x", d => x2(d.data.year))
                 .attr("y", d => y2(d[1]))
