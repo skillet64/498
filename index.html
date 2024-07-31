@@ -225,8 +225,9 @@
                 d => Math.floor(d.year / binWidth) * binWidth
             );
 
+            // Create the binned array with aggregated totals
             const binnedArray = Array.from(binnedData, ([year, values]) => ({
-                year: `${year} - ${year + binWidth - 1}`,
+                year: `${year}-${year + binWidth - 1}`,
                 Fell: d3.sum(values, d => d.Fell),
                 Found: d3.sum(values, d => d.Found),
                 GrandTotal: d3.sum(values, d => d['Grand Total'])
