@@ -237,8 +237,8 @@
             // Create the series with conditional bars based on non-zero values
             const series = stack(binnedArray.map(d => ({
                 year: d.year,
-                Found: d.Found > 0 ? d.Found : null,
-                Fell: d.Fell > 0 ? d.Fell : null
+                Found: d.Found > 0 ? d.Found : 0, // Ensure zero for non-existent data
+                Fell: d.Fell > 0 ? d.Fell : 0
             })));
 
             // Add X axis to the stacked bar chart
@@ -274,9 +274,12 @@
                 .data(d => d.filter(d => d[1] - d[0] > 0)) // Filter out zero-height bars
                 .enter().append("rect")
                 .attr("x", d => x2(d.data.year))
-                .attr("y", d => y2(d[1]))
+                .attr("y", d => y2(d[1])) // Set the y position
                 .attr("width", x2.bandwidth())
-                .attr("height", d => y2(d[0]) - y2(d[1]))
+                .attr("height", d => {
+                    const rectHeight = y2(d[0]) - y2(d[1]); // Calculate height
+                    return isFinite(rectHeight) && rectHeight > 0 ? rectHeight : 0; // Ensure valid height
+                })
                 .style("fill", d => color(d.key))
                 .on("mouseover", function(event, d) {
                     d3.select(this)
