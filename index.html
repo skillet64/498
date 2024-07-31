@@ -184,23 +184,11 @@
                     tooltip.style("display", "none");
                 });
 
-            // Add Y axis to the horizontal bar chart
-            horizontalSvg.append("g")
-                .attr("transform", `translate(${margin.left},${margin.top})`)
-                .call(d3.axisLeft(y1).tickSize(0))
-                .append("text")
-                .attr("class", "axis-label")
-                .attr("x", -margin.left)
-                .attr("y", -10)
-                .attr("fill", "#fff")
-                .attr("text-anchor", "start")
-                .text("Meteorite Name");
-
             // Process the data for the stacked bar chart
             pivotData = pivotData.filter(d => d.year !== "Unknown" && d['Grand Total'] > 0);
 
-            // Bin years into 100-year intervals
-            const binWidth = 100;
+            // Bin years into 10-year intervals
+            const binWidth = 10;
             const binnedData = d3.group(
                 pivotData,
                 d => Math.floor(d.year / binWidth) * binWidth
@@ -280,11 +268,19 @@
                 .attr("x", d => x2(d.data.year))
                 .attr("y", d => {
                     const height = y2(d[0]) - y2(d[1]);
+                    // Log problematic data points
+                    if (isNaN(height) || height < 0) {
+                        console.error(`Problematic Data Point: Year=${d.data.year}, Height=${height}, Y=${y2(d[1])}`);
+                    }
                     return isNaN(height) || height < 0 ? height : y2(d[1]);
                 })
                 .attr("width", x2.bandwidth())
                 .attr("height", d => {
                     const height = y2(d[0]) - y2(d[1]);
+                    // Log problematic data points
+                    if (isNaN(height) || height < 0) {
+                        console.error(`Problematic Data Point: Year=${d.data.year}, Height=${height}, Y=${y2(d[1])}`);
+                    }
                     return isNaN(height) || height < 0 ? 0 : height;
                 })
                 .style("fill", d => color(d.key))
