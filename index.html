@@ -214,8 +214,8 @@
                     tooltip.style("display", "none");
                 });
 
-            // Add x-axis for horizontal bar chart
-            const xAxis1 = d3.axisBottom(x1).ticks(10).tickSize(-height);
+            // Add x-axis and y-axis for horizontal bar chart
+            const xAxis1 = d3.axisBottom(x1).ticks(10);
             const yAxis1 = d3.axisLeft(y1);
 
             horizontalSvg.append("g")
@@ -232,19 +232,20 @@
                 .style("fill", colorScheme.legend)
                 .style("font-size", "12px");
 
+            // Remove grid lines
+            horizontalSvg.selectAll(".tick line").remove();
+
             // Bin data into 50-year intervals
             const binnedData = d3.nest()
                 .key(d => Math.floor(d.year / 50) * 50)
-                .rollup(v => {
-                    return {
-                        Fell: d3.sum(v, d => d.Fell),
-                        Found: d3.sum(v, d => d.Found),
-                        'Grand Total': d3.sum(v, d => d['Grand Total'])
-                    };
-                })
+                .rollup(v => ({
+                    Fell: d3.sum(v, d => d.Fell),
+                    Found: d3.sum(v, d => d.Found),
+                    'Grand Total': d3.sum(v, d => d['Grand Total'])
+                }))
                 .entries(pivotData)
                 .map(d => ({
-                    year: d.key,
+                    year: +d.key,
                     ...d.value
                 }));
 
