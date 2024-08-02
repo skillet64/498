@@ -232,22 +232,38 @@
                 .style("fill", colorScheme.legend)
                 .style("font-size", "12px");
 
-            // Process data for stacked bar chart
-            const years = Array.from(new Set(pivotData.map(d => d.year))).sort((a, b) => a - b);
+            // Bin data into 50-year intervals
+            const binnedData = d3.nest()
+                .key(d => Math.floor(d.year / 50) * 50)
+                .rollup(v => {
+                    return {
+                        Fell: d3.sum(v, d => d.Fell),
+                        Found: d3.sum(v, d => d.Found),
+                        'Grand Total': d3.sum(v, d => d['Grand Total'])
+                    };
+                })
+                .entries(pivotData)
+                .map(d => ({
+                    year: d.key,
+                    ...d.value
+                }));
+
+            // Update domains for binned data
+            const years = binnedData.map(d => d.year);
             const categories = ['Fell', 'Found'];
-            
+
             const x2 = d3.scaleBand()
                 .domain(years)
                 .range([0, width])
                 .padding(0.1);
 
             const y2 = d3.scaleLinear()
-                .domain([0, d3.max(pivotData, d => d['Grand Total'])])
+                .domain([0, d3.max(binnedData, d => d['Grand Total'])])
                 .range([height, 0]);
 
             const color2 = d3.scaleOrdinal()
                 .domain(categories)
-                .range(['#BDC3C7', '#F1C40F']); // Gray for 'Fell' and yellow for 'Found'
+                .range([colorScheme.fellBar, colorScheme.foundBar]); // Gray for 'Fell' and yellow for 'Found'
 
             const stackedSvg = stackedContainer.append("svg")
                 .attr("width", width + margin.left + margin.right)
@@ -258,7 +274,7 @@
                 .attr("transform", `translate(${margin.left},${margin.top})`);
 
             const stack = d3.stack().keys(categories);
-            const series = stack(pivotData);
+            const series = stack(binnedData);
 
             stackedBars.selectAll(".layer")
                 .data(series)
@@ -324,7 +340,8 @@
                 .attr("x", 0)
                 .attr("width", 20)
                 .attr("height", 20)
-                .style("fill", d => color2(d));
+                .style("fill", d => color2(d))
+                .attr("class", "legend-color");
 
             legendItems.append("text")
                 .attr("x", 30)
