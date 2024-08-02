@@ -149,24 +149,18 @@
 
         // Load and process data
         Promise.all([
-            d3.csv('https://skillet64.github.io/498/biggest.csv', d => ({
-                name: d.name,
-                mass: +d['mass (g) (Sum)'] || 0
-            })),
-            d3.csv('https://skillet64.github.io/498/ml-Meteorite_Landings Pivot-ml-Meteorite_Landings Pivot.csv', d => ({
-                year: +d.fall || 1399,
-                Fell: +d.Fell || 0,
-                Found: +d.Found || 0,
-                'Grand Total': (+d.Fell || 0) + (+d.Found || 0)
-            })),
-            d3.csv('https://skillet64.github.io/498/Sheet 1-ml-Meteorite_Landings.csv', d => ({
-                name: d.name,
-                lat: +d.reclat,
-                lon: +d.reclong
-            })),
+            d3.csv('https://skillet64.github.io/498/biggest.csv'),
+            d3.csv('https://skillet64.github.io/498/ml-Meteorite_Landings Pivot-ml-Meteorite_Landings Pivot.csv'),
+            d3.csv('https://skillet64.github.io/498/Sheet 1-ml-Meteorite_Landings.csv'),
             d3.json('https://skillet64.github.io/498/land-110m.json'),
             d3.json('https://skillet64.github.io/498/land-50m.json')
         ]).then(([biggestData, pivotData, meteorites, land110m, land50m]) => {
+            console.log('Biggest Data:', biggestData);
+            console.log('Pivot Data:', pivotData);
+            console.log('Meteorites:', meteorites);
+            console.log('Land 110m:', land110m);
+            console.log('Land 50m:', land50m);
+
             // Process data for horizontal bar chart
             biggestData.sort((a, b) => b.mass - a.mass);
 
@@ -196,6 +190,7 @@
                 .attr("height", y1.bandwidth())
                 .style("fill", colorScheme.bar)
                 .on("mouseover", function(event, d) {
+                    debugger; // Pause execution here
                     d3.select(this)
                         .style("fill", colorScheme.barHover);
                     tooltip
@@ -235,36 +230,54 @@
                 .attr("fill", "#fff")
                 .text("Meteorite Name");
 
-            // Process data for stacked bar chart with 100-year bins
-            const bins = d3.bin()
-                .value(d => d.year)
-                .thresholds(d3.range(1400, 2100, 100))(pivotData);
+            // Process data for stacked bar chart with 2 data files
+            const combinedData = pivotData.map(d => ({
+                year: d['Year'],
+                mass: +d['Mass (g)'] || 0
+            }));
 
             const x2 = d3.scaleBand()
-                .domain(bins.map(b => `${b.x0}-${b.x1}`))
+                .domain(combinedData.map(d => d.year))
                 .range([0, width])
-                .padding(0.2);
+                .padding(0.1);
 
             const y2 = d3.scaleLinear()
-                .domain([0, d3.max(pivotData, d => d['Grand Total'])])
+                .domain([0, d3.max(combinedData, d => d.mass)])
+                .nice()
                 .range([height, 0]);
+
+            const colorScale = d3.scaleOrdinal(d3.schemeCategory10);
 
             const stackedSvg = stackedContainer.append("svg")
                 .attr("width", width + margin.left + margin.right)
                 .attr("height", height + margin.top + margin.bottom)
                 .attr("class", "chart-svg");
 
+            const stack = d3.stack()
+                .keys(['mass'])
+                .order(d3.stackOrderAscending)
+                .offset(d3.stackOffsetDiverging);
+
+            const series = stack(combinedData.map(d => ({
+                year: d.year,
+                mass: d.mass
+            })));
+
             stackedSvg.append("g")
                 .attr("transform", `translate(${margin.left},${margin.top})`)
-                .selectAll(".stacked-bar")
-                .data(bins)
+                .selectAll(".layer")
+                .data(series)
+                .enter().append("g")
+                .attr("class", "layer")
+                .attr("fill", (d, i) => colorScale(i))
+                .selectAll("rect")
+                .data(d => d)
                 .enter().append("rect")
-                .attr("class", "stacked-bar")
-                .attr("x", d => x2(`${d.x0}-${d.x1}`))
-                .attr("y", d => y2(d3.sum(d, e => e['Grand Total'])))
+                .attr("x", d => x2(d.data.year))
+                .attr("y", d => y2(d[1]))
+                .attr("height", d => y2(d[0]) - y2(d[1]))
                 .attr("width", x2.bandwidth())
-                .attr("height", d => height - y2(d3.sum(d, e => e['Grand Total'])))
-                .style("fill", colorScheme.bar);
+                .attr("class", "stacked-bar");
 
             stackedSvg.append("g")
                 .attr("transform", `translate(${margin.left},${height + margin.top})`)
@@ -275,7 +288,7 @@
                 .attr("y", 40)
                 .attr("text-anchor", "end")
                 .attr("fill", "#fff")
-                .text("Year (Bins)");
+                .text("Year");
 
             stackedSvg.append("g")
                 .attr("transform", `translate(${margin.left},${margin.top})`)
@@ -286,20 +299,35 @@
                 .attr("y", -10)
                 .attr("text-anchor", "end")
                 .attr("fill", "#fff")
-                .text("Total");
+                .text("Mass (g)");
 
-            // Add legend
-            legendContainer.append("div")
+            // Create a legend for stacked bar chart
+            const legend = stackedSvg.selectAll(".legend")
+                .data(colorScale.domain())
+                .enter().append("g")
                 .attr("class", "legend")
-                .selectAll(".legend-item")
-                .data([
-                    { color: colorScheme.bar, text: 'Heaviest Meteorites' },
-                    { color: colorScheme.scatter, text: 'Meteorite Landings' }
-                ])
-                .enter().append("div")
-                .attr("class", "legend-item")
-                .html(d => `<div class="legend-color" style="background-color: ${d.color};"></div><div class="legend-text">${d.text}</div>`);
+                .attr("transform", (d, i) => `translate(0,${i * 20})`);
+
+            legend.append("rect")
+                .attr("x", width + 20)
+                .attr("width", 18)
+                .attr("height", 18)
+                .style("fill", colorScale);
+
+            legend.append("text")
+                .attr("x", width + 45)
+                .attr("y", 9)
+                .attr("dy", ".35em")
+                .style("text-anchor", "start")
+                .text(d => d)
+                .attr("class", "legend-text");
+
+        }).catch(error => {
+            console.error('Error loading data:', error);
         });
+
+        // Globe visualization
+        // (Implementation details would go here, assuming you want to add the globe later)
     </script>
 </body>
 </html>
