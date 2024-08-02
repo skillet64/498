@@ -162,9 +162,14 @@
             console.log('Land 110m:', land110m);
             console.log('Land 50m:', land50m);
 
+            // Ensure TopoJSON data is valid
+            if (!land110m || !land110m.objects || !land110m.objects.countries) {
+                throw new Error('Invalid TopoJSON data for land-110m.json');
+            }
+
             // Process data for horizontal bar chart
             biggestData.forEach(d => {
-                d.mass = +d['mass'] || 0;  // Use the correct header for mass
+                d.mass = +d['mass (g)'] || 0;  // Use the correct header for mass
             });
             biggestData.sort((a, b) => b.mass - a.mass);
 
@@ -198,7 +203,7 @@
                         .style("fill", colorScheme.barHover);
                     tooltip
                         .style("display", "block")
-                        .html(`Name: ${d.name}<br>Mass: ${d.mass} g`);
+                        .html(`Name: ${d.name}<br>Mass: ${d.mass}`);
                 })
                 .on("mousemove", function(event) {
                     tooltip
@@ -213,7 +218,7 @@
 
             horizontalSvg.append("g")
                 .attr("transform", `translate(${margin.left},${height + margin.top})`)
-                .call(d3.axisBottom(x1).ticks(10, ",.0s"))
+                .call(d3.axisBottom(x1))
                 .append("text")
                 .attr("class", "axis-label")
                 .attr("x", width)
