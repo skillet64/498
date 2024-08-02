@@ -46,8 +46,11 @@
         .bar-hover {
             fill: #fff; /* White for hover effect */
         }
-        .stacked-bar {
-            fill: #F1C40F; /* Yellow for stacked bars */
+        .stacked-bar-found {
+            fill: #F1C40F; /* Yellow for Found bars */
+        }
+        .stacked-bar-fell {
+            fill: #BDC3C7; /* Light grey for Fell bars */
         }
         .label {
             font-size: 12px;
@@ -122,7 +125,9 @@
             <h2>Meteorite Landings Around the Globe</h2>
             <p>Below is a globe showing locations where meteorites have landed. Hover over the points to see details.</p>
         </div>
-        <!-- Globe container removed -->
+        <div id="globe-container">
+            <!-- Globe visualization will be appended here -->
+        </div>
     </div>
     <div class="tooltip"></div>
     <script>
@@ -136,7 +141,7 @@
             bar: '#F1C40F',         // Yellow for bars
             barHover: '#fff',       // White for hover effect
             foundBar: '#F1C40F',    // Yellow for 'Found' bars
-            fellBar: '#BDC3C7',     // Light gray for 'Fell' bars
+            fellBar: '#BDC3C7',     // Light grey for 'Fell' bars
             legend: '#fff'          // White for legend text
         };
 
@@ -241,32 +246,13 @@
                 .value(d => d.year)
                 .thresholds(d3.range(1400, 2100, 100))(pivotData);
 
-            // Create a map for bins
-            const binMap = new Map();
-            bins.forEach(bin => {
-                const binYearRange = `${bin.x0}-${bin.x1}`;
-                binMap.set(binYearRange, { Found: 0, Fell: 0 });
-                bin.forEach(d => {
-                    binMap.get(binYearRange).Found += d.Found;
-                    binMap.get(binYearRange).Fell += d.Fell;
-                });
-            });
-
-            const binnedData = Array.from(binMap, ([key, value]) => ({
-                yearRange: key,
-                Found: value.Found,
-                Fell: value.Fell
-            }));
-
-            // Define scales and axes for stacked bar chart
             const x2 = d3.scaleBand()
-                .domain(binnedData.map(d => d.yearRange))
+                .domain(bins.map(b => `${b.x0}-${b.x1}`))
                 .range([0, width])
                 .padding(0.2);
 
             const y2 = d3.scaleLinear()
-                .domain([0, d3.max(binnedData, d => d.Found + d.Fell)])
-                .nice()
+                .domain([0, d3.max(pivotData, d => d['Grand Total'])])
                 .range([height, 0]);
 
             const stackedSvg = stackedContainer.append("svg")
@@ -274,41 +260,43 @@
                 .attr("height", height + margin.top + margin.bottom)
                 .attr("class", "chart-svg");
 
-            // Stack data for 'Found' and 'Fell'
-            const stackedData = d3.stack()
-                .keys(['Found', 'Fell'])
-                .value((d, key) => d[key])
-                (binnedData);
+            // Create stack generator
+            const stack = d3.stack()
+                .keys(["Found", "Fell"])
+                .order(d3.stackOrderNone)
+                .offset(d3.stackOffsetNone);
 
-            // Draw the stacked bar chart
+            const stackedData = stack(pivotData);
+
             stackedSvg.append("g")
                 .attr("transform", `translate(${margin.left},${margin.top})`)
-                .selectAll("g")
+                .selectAll(".stacked-bar")
                 .data(stackedData)
                 .enter().append("g")
-                .attr("fill", d => d.key === 'Found' ? colorScheme.foundBar : colorScheme.fellBar)
-                .selectAll("rect")
+                .selectAll(".stacked-bar")
                 .data(d => d)
                 .enter().append("rect")
-                .attr("x", d => x2(d.data.yearRange))
+                .attr("class", d => d.key === "Found" ? "stacked-bar-found" : "stacked-bar-fell")
+                .attr("x", d => x2(`${d.data.year}-${d.data.year + 100}`))
                 .attr("y", d => y2(d[1]))
-                .attr("height", d => y2(d[0]) - y2(d[1]))
                 .attr("width", x2.bandwidth())
+                .attr("height", d => y2(d[0]) - y2(d[1]))
+                .style("fill", d => d.key === "Found" ? colorScheme.foundBar : colorScheme.fellBar)
                 .on("mouseover", function(event, d) {
                     d3.select(this)
-                        .style("fill", colorScheme.barHover);
+                        .style("fill", "#fff"); // Highlight color
                     tooltip
                         .style("display", "block")
-                        .html(`Year Range: ${d.data.yearRange}<br>${d3.select(this).style("fill") === colorScheme.foundBar ? 'Found' : 'Fell'}: ${d[1] - d[0]}`);
+                        .html(`Year: ${d.data.year}-${d.data.year + 100}<br>${d.key}: ${d[1] - d[0]}`);
                 })
                 .on("mousemove", function(event) {
                     tooltip
                         .style("top", (event.pageY + 5) + "px")
                         .style("left", (event.pageX + 5) + "px");
                 })
-                .on("mouseout", function() {
+                .on("mouseout", function(d) {
                     d3.select(this)
-                        .style("fill", d => d.key === 'Found' ? colorScheme.foundBar : colorScheme.fellBar);
+                        .style("fill", d.key === "Found" ? colorScheme.foundBar : colorScheme.fellBar);
                     tooltip.style("display", "none");
                 });
 
@@ -321,7 +309,7 @@
                 .attr("y", 40)
                 .attr("text-anchor", "end")
                 .attr("fill", "#fff")
-                .text("Year Range");
+                .text("Year (Bins)");
 
             stackedSvg.append("g")
                 .attr("transform", `translate(${margin.left},${margin.top})`)
@@ -332,84 +320,32 @@
                 .attr("y", -10)
                 .attr("text-anchor", "end")
                 .attr("fill", "#fff")
-                .text("Total");
+                .text("Count");
 
-            // Add Legend
+            // Add legend
             const legend = legendContainer.append("svg")
                 .attr("width", 200)
-                .attr("height", 80);
+                .attr("height", 100);
 
-            const legendData = [
+            const legendItems = [
                 { color: colorScheme.foundBar, label: 'Found' },
                 { color: colorScheme.fellBar, label: 'Fell' }
             ];
 
-            const legendItems = legend.selectAll(".legend-item")
-                .data(legendData)
-                .enter().append("g")
-                .attr("class", "legend-item")
-                .attr("transform", (d, i) => `translate(0, ${i * 25})`);
+            legendItems.forEach((item, index) => {
+                legend.append("rect")
+                    .attr("x", 10)
+                    .attr("y", 10 + index * 30)
+                    .attr("width", 20)
+                    .attr("height", 20)
+                    .style("fill", item.color);
 
-            legendItems.append("rect")
-                .attr("class", "legend-color")
-                .attr("width", 20)
-                .attr("height", 20)
-                .attr("fill", d => d.color);
-
-            legendItems.append("text")
-                .attr("class", "legend")
-                .attr("x", 30)
-                .attr("y", 15)
-                .text(d => d.label);
-
-            // Globe Visualization (optional - placeholder code)
-            const globeContainer = d3.select("#globe-container");
-
-            // Define dimensions and projection for globe
-            const globeWidth = 800;
-            const globeHeight = 400;
-            const projection = d3.geoOrthographic()
-                .scale(150)
-                .translate([globeWidth / 2, globeHeight / 2])
-                .clipAngle(90);
-
-            const path = d3.geoPath().projection(projection);
-
-            const globeSvg = globeContainer.append("svg")
-                .attr("width", globeWidth)
-                .attr("height", globeHeight);
-
-            globeSvg.append("g")
-                .selectAll("path")
-                .data(topojson.feature(land110m, land110m.objects.countries).features)
-                .enter().append("path")
-                .attr("d", path)
-                .style("fill", "#ccc");
-
-            globeSvg.append("g")
-                .selectAll("circle")
-                .data(meteorites)
-                .enter().append("circle")
-                .attr("cx", d => projection([d.lon, d.lat])[0])
-                .attr("cy", d => projection([d.lon, d.lat])[1])
-                .attr("r", 2)
-                .style("fill", "#FF5722")
-                .on("mouseover", function(event, d) {
-                    tooltip
-                        .style("display", "block")
-                        .html(`Name: ${d.name}`);
-                })
-                .on("mousemove", function(event) {
-                    tooltip
-                        .style("top", (event.pageY + 5) + "px")
-                        .style("left", (event.pageX + 5) + "px");
-                })
-                .on("mouseout", function() {
-                    tooltip.style("display", "none");
-                });
-
-        }).catch(error => {
-            console.error('Error loading data:', error);
+                legend.append("text")
+                    .attr("x", 40)
+                    .attr("y", 25 + index * 30)
+                    .attr("fill", colorScheme.legend)
+                    .text(item.label);
+            });
         });
     </script>
 </body>
