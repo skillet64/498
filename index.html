@@ -135,8 +135,8 @@
         const colorScheme = {
             bar: '#F1C40F',         // Yellow for bars
             barHover: '#fff',       // White for hover effect
-            foundBar: '#F1C40F',    // Yellow for 'Found'
-            fellBar: '#fff',        // White for 'Fell'
+            foundBar: '#F1C40F',    // Yellow for 'Found' bars
+            fellBar: '#BDC3C7',     // Light gray for 'Fell' bars
             legend: '#fff'          // White for legend text
         };
 
@@ -293,7 +293,24 @@
                 .attr("x", d => x2(d.data.yearRange))
                 .attr("y", d => y2(d[1]))
                 .attr("height", d => y2(d[0]) - y2(d[1]))
-                .attr("width", x2.bandwidth());
+                .attr("width", x2.bandwidth())
+                .on("mouseover", function(event, d) {
+                    d3.select(this)
+                        .style("fill", colorScheme.barHover);
+                    tooltip
+                        .style("display", "block")
+                        .html(`Year Range: ${d.data.yearRange}<br>${d3.select(this).style("fill") === colorScheme.foundBar ? 'Found' : 'Fell'}: ${d[1] - d[0]}`);
+                })
+                .on("mousemove", function(event) {
+                    tooltip
+                        .style("top", (event.pageY + 5) + "px")
+                        .style("left", (event.pageX + 5) + "px");
+                })
+                .on("mouseout", function() {
+                    d3.select(this)
+                        .style("fill", d => d.key === 'Found' ? colorScheme.foundBar : colorScheme.fellBar);
+                    tooltip.style("display", "none");
+                });
 
             stackedSvg.append("g")
                 .attr("transform", `translate(${margin.left},${height + margin.top})`)
@@ -317,17 +334,82 @@
                 .attr("fill", "#fff")
                 .text("Total");
 
-            // Add legend
-            legendContainer.append("div")
-                .attr("class", "legend")
-                .selectAll(".legend-item")
-                .data([
-                    { color: colorScheme.foundBar, text: 'Found' },
-                    { color: colorScheme.fellBar, text: 'Fell' }
-                ])
-                .enter().append("div")
+            // Add Legend
+            const legend = legendContainer.append("svg")
+                .attr("width", 200)
+                .attr("height", 80);
+
+            const legendData = [
+                { color: colorScheme.foundBar, label: 'Found' },
+                { color: colorScheme.fellBar, label: 'Fell' }
+            ];
+
+            const legendItems = legend.selectAll(".legend-item")
+                .data(legendData)
+                .enter().append("g")
                 .attr("class", "legend-item")
-                .html(d => `<div class="legend-color" style="background-color: ${d.color};"></div><div class="legend-text">${d.text}</div>`);
+                .attr("transform", (d, i) => `translate(0, ${i * 25})`);
+
+            legendItems.append("rect")
+                .attr("class", "legend-color")
+                .attr("width", 20)
+                .attr("height", 20)
+                .attr("fill", d => d.color);
+
+            legendItems.append("text")
+                .attr("class", "legend")
+                .attr("x", 30)
+                .attr("y", 15)
+                .text(d => d.label);
+
+            // Globe Visualization (optional - placeholder code)
+            const globeContainer = d3.select("#globe-container");
+
+            // Define dimensions and projection for globe
+            const globeWidth = 800;
+            const globeHeight = 400;
+            const projection = d3.geoOrthographic()
+                .scale(150)
+                .translate([globeWidth / 2, globeHeight / 2])
+                .clipAngle(90);
+
+            const path = d3.geoPath().projection(projection);
+
+            const globeSvg = globeContainer.append("svg")
+                .attr("width", globeWidth)
+                .attr("height", globeHeight);
+
+            globeSvg.append("g")
+                .selectAll("path")
+                .data(topojson.feature(land110m, land110m.objects.countries).features)
+                .enter().append("path")
+                .attr("d", path)
+                .style("fill", "#ccc");
+
+            globeSvg.append("g")
+                .selectAll("circle")
+                .data(meteorites)
+                .enter().append("circle")
+                .attr("cx", d => projection([d.lon, d.lat])[0])
+                .attr("cy", d => projection([d.lon, d.lat])[1])
+                .attr("r", 2)
+                .style("fill", "#FF5722")
+                .on("mouseover", function(event, d) {
+                    tooltip
+                        .style("display", "block")
+                        .html(`Name: ${d.name}`);
+                })
+                .on("mousemove", function(event) {
+                    tooltip
+                        .style("top", (event.pageY + 5) + "px")
+                        .style("left", (event.pageX + 5) + "px");
+                })
+                .on("mouseout", function() {
+                    tooltip.style("display", "none");
+                });
+
+        }).catch(error => {
+            console.error('Error loading data:', error);
         });
     </script>
 </body>
