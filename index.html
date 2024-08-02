@@ -47,7 +47,7 @@
             fill: #fff; /* White for hover effect */
         }
         .stacked-bar {
-            fill: #F1C40F; /* Default fill color for stacked bars */
+            fill: #BDC3C7; /* Default fill color for stacked bars */
         }
         .label {
             font-size: 12px;
@@ -264,7 +264,7 @@
 
             const color2 = d3.scaleOrdinal()
                 .domain(categories)
-                .range([colorScheme.fellBar, colorScheme.foundBar]); // Gray for 'Fell' and yellow for 'Found'
+                .range([colorScheme.foundBar, colorScheme.fellBar]); // Color mapping for categories
 
             const stackedSvg = stackedContainer.append("svg")
                 .attr("width", width + margin.left + margin.right)
@@ -292,7 +292,7 @@
                 .style("fill", d => color2(d.key)) // Set the color for bars
                 .on("mouseover", function(event, d) {
                     d3.select(this)
-                        .style("fill", colorScheme.barHover);
+                        .style("fill", colorScheme.barHover); // Color change on hover
                     tooltip
                         .style("display", "block")
                         .html(`Year: ${d.data.year}<br>${d.key}: ${d[1] - d[0]}`);
