@@ -216,7 +216,7 @@
 
             horizontalSvg.append("g")
                 .attr("transform", `translate(${margin.left},${height + margin.top})`)
-                .call(d3.axisBottom(x1).ticks(10, ",.0s"))
+                .call(d3.axisBottom(x1))
                 .append("text")
                 .attr("class", "axis-label")
                 .attr("x", width)
@@ -226,7 +226,7 @@
                 .text("Mass (g)");
 
             horizontalSvg.append("g")
-                .attr("transform", `translate(${margin.left},${margin.top})`)
+                .attr("transform", `translate(${margin.left},0)`)
                 .call(d3.axisLeft(y1))
                 .append("text")
                 .attr("class", "axis-label")
@@ -242,15 +242,18 @@
                 .order(d3.stackOrderNone)
                 .offset(d3.stackOffsetNone);
 
-            const stackedData = stack(pivotData);
+            // Filter out years with zero 'Grand Total'
+            const filteredPivotData = pivotData.filter(d => d['Grand Total'] > 0);
+
+            const stackedData = stack(filteredPivotData);
 
             const x2 = d3.scaleBand()
-                .domain(pivotData.map(d => d.year))
+                .domain(filteredPivotData.map(d => d.year))
                 .range([0, width])
                 .padding(0.1);
 
             const y2 = d3.scaleLinear()
-                .domain([0, d3.max(pivotData, d => d['Grand Total'])])
+                .domain([0, d3.max(filteredPivotData, d => d['Grand Total'])])
                 .nice()
                 .range([height, 0]);
 
@@ -336,7 +339,7 @@
                 .text(d => d)
                 .attr("fill", colorScheme.legend);
 
-            // Create globe visualization here (not included in this code)
+            // Create a globe map if needed later (removed in this example)
         });
     </script>
 </body>
