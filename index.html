@@ -47,7 +47,7 @@
             fill: #fff; /* White for hover effect */
         }
         .stacked-bar {
-            fill: #F1C40F; /* Yellow for stacked bars */
+            fill: #F1C40F; /* Default fill color for stacked bars */
         }
         .label {
             font-size: 12px;
@@ -304,7 +304,7 @@
                 })
                 .on("mouseout", function() {
                     d3.select(this)
-                        .style("fill", colorScheme.stackedBar);
+                        .style("fill", d => color2(d.data.key)); // Use category color
                     tooltip.style("display", "none");
                 });
 
