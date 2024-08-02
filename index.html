@@ -6,7 +6,6 @@
     <title>Meteorite Data Visualizations</title>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="https://d3js.org/topojson.v3.min.js"></script>
-    <script src="https://unpkg.com/ts-maps@latest/dist/maps/earth.min.js"></script>
     <style>
         body {
             margin: 0;
@@ -165,7 +164,7 @@
 
             // Process data for horizontal bar chart
             biggestData.forEach(d => {
-                d.mass = +d['mass (g)'] || 0;
+                d.mass = +d['mass'] || 0;  // Use the correct header for mass
             });
             biggestData.sort((a, b) => b.mass - a.mass);
 
@@ -183,7 +182,7 @@
                 .attr("height", height + margin.top + margin.bottom)
                 .attr("class", "chart-svg");
 
-            const bars = horizontalSvg.append("g")
+            horizontalSvg.append("g")
                 .attr("transform", `translate(${margin.left},${margin.top})`)
                 .selectAll(".bar")
                 .data(biggestData)
@@ -234,7 +233,7 @@
                 .attr("fill", "#fff")
                 .text("Meteorite Name");
 
-            // Process data for stacked bar chart with "Fell" vs. "Found"
+            // Process data for stacked bar chart
             pivotData.forEach(d => {
                 d.year = +d.year || 1399;
                 d.Fell = +d.Fell || 0;
@@ -348,7 +347,7 @@
                 .on("mouseover", function(event, d) {
                     tooltip
                         .style("display", "block")
-                        .html(`Name: ${d.name}<br>Lat: ${+d.reclat.toFixed(2)}<br>Lon: ${+d.reclong.toFixed(2)}`);
+                        .html(`Name: ${d.nametype}<br>Lat: ${+d.reclat.toFixed(2)}<br>Lon: ${+d.reclong.toFixed(2)}`);
                 })
                 .on("mousemove", function(event) {
                     tooltip
