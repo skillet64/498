@@ -278,7 +278,7 @@
                         .style("fill", colorScheme.barHover); // Change color on hover
                     tooltip
                         .style("display", "block")
-                        .html(`Year Range: ${d.data.year}<br>${d.key}: ${d[1] - d[0]}`);
+                        .html(`Year Range: ${d.data.year}<br>Total: ${d[1] - d[0]}`);
                 })
                 .on("mousemove", function(event) {
                     tooltip
