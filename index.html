@@ -248,18 +248,18 @@
             // Process data for stacked bar chart
             const getYearBin = year => Math.floor(year / 100) * 100;
 
-            const binnedData = d3.nest()
-                .key(d => getYearBin(d.year))
-                .rollup(v => ({
+            const binnedData = Array.from(d3.rollup(
+                pivotData,
+                v => ({
                     Found: d3.sum(v, d => d.Found),
                     Fell: d3.sum(v, d => d.Fell)
-                }))
-                .entries(pivotData)
-                .map(d => ({
-                    year: +d.key,
-                    Found: d.value.Found,
-                    Fell: d.value.Fell
-                }));
+                }),
+                d => getYearBin(d.year)
+            )).map(([year, values]) => ({
+                year: +year,
+                Found: values.Found,
+                Fell: values.Fell
+            }));
 
             const x2 = d3.scaleBand()
                 .domain(binnedData.map(d => d.year))
