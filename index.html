@@ -281,7 +281,6 @@
                 .data(series)
                 .enter().append("g")
                 .attr("class", "layer")
-                .attr("fill", d => color2(d.key))
                 .selectAll("rect")
                 .data(d => d)
                 .enter().append("rect")
@@ -290,6 +289,7 @@
                 .attr("height", d => y2(d[0]) - y2(d[1]))
                 .attr("width", x2.bandwidth())
                 .attr("class", "stacked-bar")
+                .style("fill", d => color2(d.key)) // Set the color for bars
                 .on("mouseover", function(event, d) {
                     d3.select(this)
                         .style("fill", colorScheme.barHover);
@@ -302,9 +302,9 @@
                         .style("top", (event.pageY + 5) + "px")
                         .style("left", (event.pageX + 5) + "px");
                 })
-                .on("mouseout", function() {
+                .on("mouseout", function(event, d) {
                     d3.select(this)
-                        .style("fill", d => color2(d.data.key)); // Use category color
+                        .style("fill", color2(d.key)); // Reset to original category color
                     tooltip.style("display", "none");
                 });
 
