@@ -158,102 +158,311 @@
     </div>
     <div class="tooltip"></div>
     <script>
-        // Define dimensions for the globe
-        const globeWidth = document.getElementById('globe-container').offsetWidth;
-        const globeHeight = 600; // Fixed height for the globe
-        const globeRadius = Math.min(globeWidth, globeHeight) / 2;
+        // Define dimensions and margins for bar charts
+        const margin = { top: 20, right: 200, bottom: 100, left: 150 },
+              width = 2000 - margin.left - margin.right,
+              height = 600 - margin.top - margin.bottom;
 
-        // Set up canvas and context for the globe
-        const canvas = d3.select("#globe-canvas")
-            .attr("width", globeWidth)
-            .attr("height", globeHeight);
-        const context = canvas.node().getContext("2d");
+        // Define color scheme
+        const colorScheme = {
+            bar: '#F1C40F',         // Yellow for bars
+            barHover: '#fff',       // White for hover effect
+            foundBar: '#F1C40F',    // Yellow for 'Found' bars
+            fellBar: '#BDC3C7',     // Light gray for 'Fell' bars
+            legend: '#fff'          // White for legend text
+        };
 
-        // Set up projection and path for the globe
-        const projection = d3.geoOrthographic()
-            .translate([globeWidth / 2, globeHeight / 2])
-            .scale(globeRadius);
-        const path = d3.geoPath().projection(projection).context(context);
+        // Create SVG containers for charts
+        const horizontalContainer = d3.select("#horizontal-chart-container");
+        const stackedContainer = d3.select("#stacked-chart-container");
+        const legendContainer = d3.select("#legend-container");
 
-        let landData, countryBorders, pinsData;
-        function renderGlobe() {
-            context.clearRect(0, 0, globeWidth, globeHeight);
-            // Draw the map sphere
-            context.beginPath();
-            path({type: "Sphere"});
-            context.fillStyle = "#0000ff"; // Blue for oceans
-            context.fill();
-            // Draw the land
-            context.beginPath();
-            path(landData);
-            context.fillStyle = "#bada55"; // Green for land
-            context.fill();
-            // Draw country borders
-            context.beginPath();
-            path(countryBorders);
-            context.strokeStyle = "#333";
-            context.lineWidth = 1;
-            context.stroke();
-            // Draw heat map
-            drawHeatMap();
-        }
+        // Create a tooltip
+        const tooltip = d3.select(".tooltip");
 
-        function drawHeatMap() {
-            // Create an off-screen canvas to compute the heat map
-            const heatCanvas = document.createElement("canvas");
-            heatCanvas.width = globeWidth;
-            heatCanvas.height = globeHeight;
-            const heatContext = heatCanvas.getContext("2d");
+        // Load and process data
+        Promise.all([
+            d3.csv('https://skillet64.github.io/498/biggest.csv', d => ({
+                name: d.name,
+                mass: +d['mass (g) (Sum)'] || 0
+            })),
+            d3.csv('https://skillet64.github.io/498/ml-Meteorite_Landings Pivot-ml-Meteorite_Landings Pivot.csv', d => ({
+                year: +d.fall || 1399,
+                Fell: +d.Fell || 0,
+                Found: +d.Found || 0,
+                'Grand Total': (+d.Fell || 0) + (+d.Found || 0)
+            })),
+            d3.csv('https://skillet64.github.io/498/Sheet 1-ml-Meteorite_Landings.csv', d => ({
+                name: d.name,
+                lat: +d.reclat,
+                lon: +d.reclong
+            })),
+            d3.json('https://skillet64.github.io/498/land-110m.json'),
+            d3.json('https://skillet64.github.io/498/land-50m.json')
+        ]).then(([biggestData, pivotData, meteorites, land110m, land50m]) => {
+            // Process data for horizontal bar chart
+            biggestData.sort((a, b) => b.mass - a.mass);
 
-            // Define a color scale
-            const colorScale = d3.scaleSequential(d3.interpolateWarm)
-                .domain([0, 100]); // Adjust the domain as needed for your data
+            const x1 = d3.scaleLinear()
+                .domain([0, d3.max(biggestData, d => d.mass)])
+                .range([0, width]);
 
-            // Use a simple density function for demo purposes
-            const density = {};
-            pinsData.forEach(d => {
-                const [x, y] = projection([+d.lon, +d.lat]);
-                if (x && y) {
-                    const key = `${Math.floor(x)},${Math.floor(y)}`;
-                    density[key] = (density[key] || 0) + 1;
+            const y1 = d3.scaleBand()
+                .domain(biggestData.map(d => d.name))
+                .range([0, height])
+                .padding(0.1);
+
+            const horizontalSvg = horizontalContainer.append("svg")
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom)
+                .attr("class", "chart-svg");
+
+            const bars = horizontalSvg.append("g")
+                .attr("transform", `translate(${margin.left},${margin.top})`)
+                .selectAll(".bar")
+                .data(biggestData)
+                .enter().append("rect")
+                .attr("class", "bar")
+                .attr("x", 0)
+                .attr("y", d => y1(d.name))
+                .attr("width", d => x1(d.mass))
+                .attr("height", y1.bandwidth())
+                .style("fill", colorScheme.bar)
+                .on("mouseover", function(event, d) {
+                    d3.select(this)
+                        .style("fill", colorScheme.barHover);
+                    tooltip
+                        .style("display", "block")
+                        .html(`Name: ${d.name}<br>Mass: ${d.mass} g`);
+                })
+                .on("mousemove", function(event) {
+                    tooltip
+                        .style("top", (event.pageY + 5) + "px")
+                        .style("left", (event.pageX + 5) + "px");
+                })
+                .on("mouseout", function() {
+                    d3.select(this)
+                        .style("fill", colorScheme.bar);
+                    tooltip.style("display", "none");
+                });
+
+            // Add x-axis and y-axis for horizontal bar chart
+            const xAxis1 = d3.axisBottom(x1).ticks(10);
+            const yAxis1 = d3.axisLeft(y1);
+
+            horizontalSvg.append("g")
+                .attr("transform", `translate(${margin.left},${margin.top + height})`)
+                .call(xAxis1)
+                .selectAll("text")
+                .style("fill", colorScheme.legend)
+                .style("font-size", "12px");
+
+            horizontalSvg.append("g")
+                .attr("transform", `translate(${margin.left},${margin.top})`)
+                .call(yAxis1)
+                .selectAll("text")
+                .style("fill", colorScheme.legend)
+                .style("font-size", "12px");
+
+            // Remove grid lines
+            horizontalSvg.selectAll(".tick line").remove();
+
+            // Bin data into 50-year intervals
+            const binnedData = Array.from(d3.rollup(
+                pivotData,
+                v => ({
+                    Fell: d3.sum(v, d => d.Fell),
+                    Found: d3.sum(v, d => d.Found),
+                    'Grand Total': d3.sum(v, d => d['Grand Total'])
+                }),
+                d => Math.floor(d.year / 50) * 50
+            )).map(([year, values]) => ({
+                year: +year,
+                ...values
+            }));
+
+            // Update domains for binned data
+            const years = binnedData.map(d => d.year);
+            const categories = ['Fell', 'Found'];
+
+            const x2 = d3.scaleBand()
+                .domain(years)
+                .range([0, width])
+                .padding(0.1);
+
+            const y2 = d3.scaleLinear()
+                .domain([0, d3.max(binnedData, d => d['Grand Total'])])
+                .range([height, 0]);
+
+            const color2 = d3.scaleOrdinal()
+                .domain(categories)
+                .range([colorScheme.foundBar, colorScheme.fellBar]);
+
+            const stackedSvg = stackedContainer.append("svg")
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom)
+                .attr("class", "chart-svg");
+
+            const stackedBars = stackedSvg.append("g")
+                .attr("transform", `translate(${margin.left},${margin.top})`);
+
+            const stack = d3.stack().keys(categories);
+            const series = stack(binnedData);
+
+            stackedBars.selectAll(".layer")
+                .data(series)
+                .enter().append("g")
+                .attr("class", "layer")
+                .selectAll("rect")
+                .data(d => d)
+                .enter().append("rect")
+                .attr("x", d => x2(d.data.year))
+                .attr("y", d => y2(d[1]))
+                .attr("height", d => y2(d[0]) - y2(d[1]))
+                .attr("width", x2.bandwidth())
+                .attr("class", "stacked-bar")
+                .style("fill", d => color2(d.key))
+                .on("mouseover", function(event, d) {
+                    d3.select(this)
+                        .style("fill", colorScheme.barHover);
+                    tooltip
+                        .style("display", "block")
+                        .html(`Year: ${d.data.year}<br>${d.key}: ${d[1] - d[0]}`);
+                })
+                .on("mousemove", function(event) {
+                    tooltip
+                        .style("top", (event.pageY + 5) + "px")
+                        .style("left", (event.pageX + 5) + "px");
+                })
+                .on("mouseout", function(event, d) {
+                    d3.select(this)
+                        .style("fill", color2(d.key));
+                    tooltip.style("display", "none");
+                });
+
+            // Add x-axis and y-axis for stacked bar chart
+            const xAxis2 = d3.axisBottom(x2);
+            const yAxis2 = d3.axisLeft(y2).ticks(10);
+
+            stackedSvg.append("g")
+                .attr("transform", `translate(${margin.left},${margin.top + height})`)
+                .call(xAxis2)
+                .selectAll("text")
+                .style("fill", colorScheme.legend)
+                .style("font-size", "12px");
+
+            stackedSvg.append("g")
+                .attr("transform", `translate(${margin.left},${margin.top})`)
+                .call(yAxis2)
+                .selectAll("text")
+                .style("fill", colorScheme.legend)
+                .style("font-size", "12px");
+
+            // Add a legend
+            const legend = legendContainer.append("svg")
+                .attr("width", 200)
+                .attr("height", categories.length * 20);
+
+            const legendItems = legend.selectAll(".legend-item")
+                .data(categories)
+                .enter().append("g")
+                .attr("class", "legend-item")
+                .attr("transform", (d, i) => `translate(0, ${i * 20})`);
+
+            legendItems.append("rect")
+                .attr("x", 0)
+                .attr("width", 20)
+                .attr("height", 20)
+                .style("fill", d => color2(d))
+                .attr("class", "legend-color");
+
+            legendItems.append("text")
+                .attr("x", 30)
+                .attr("y", 15)
+                .text(d => d)
+                .attr("class", "legend");
+
+            // Globe Rendering Code
+            let projection, path, svg;
+            const widthGlobe = 800;
+            const heightGlobe = 600;
+
+            function renderGlobe() {
+                if (!svg) {
+                    svg = d3.select("#globe-container").append("svg")
+                        .attr("width", widthGlobe)
+                        .attr("height", heightGlobe)
+                        .append("g")
+                        .attr("transform", `translate(${widthGlobe / 2},${heightGlobe / 2})`);
+
+                    projection = d3.geoOrthographic()
+                        .scale(250)
+                        .translate([0, 0])
+                        .rotate([0, 0]);
+
+                    path = d3.geoPath().projection(projection);
+
+                    // Draw country borders
+                    svg.append("path")
+                        .datum({type: "Sphere"})
+                        .attr("class", "land")
+                        .attr("d", path);
+
+                    svg.append("path")
+                        .datum(topojson.feature(countryBorders, countryBorders.objects.countries))
+                        .attr("class", "border")
+                        .attr("d", path);
+
+                    // Add meteorite points
+                    svg.selectAll("circle")
+                        .data(pinsData)
+                        .enter().append("circle")
+                        .attr("r", 2)
+                        .attr("fill", "#FF5722")
+                        .attr("cx", d => projection([d.lon, d.lat])[0])
+                        .attr("cy", d => projection([d.lon, d.lat])[1])
+                        .on("mouseover", (event, d) => {
+                            tooltip
+                                .style("display", "block")
+                                .html(`Name: ${d.name}<br>Lat: ${d.lat}<br>Lon: ${d.lon}`);
+                        })
+                        .on("mousemove", event => {
+                            tooltip
+                                .style("top", (event.pageY + 5) + "px")
+                                .style("left", (event.pageX + 5) + "px");
+                        })
+                        .on("mouseout", () => tooltip.style("display", "none"));
+                } else {
+                    svg.selectAll(".land").attr("d", path);
+                    svg.selectAll(".border").attr("d", path);
+                    svg.selectAll("circle")
+                        .attr("cx", d => projection([d.lon, d.lat])[0])
+                        .attr("cy", d => projection([d.lon, d.lat])[1]);
                 }
-            });
+            }
 
-            // Draw the heat map on the off-screen canvas
-            Object.keys(density).forEach(key => {
-                const [x, y] = key.split(',').map(Number);
-                const value = density[key];
-                heatContext.beginPath();
-                heatContext.arc(x, y, 10, 0, 2 * Math.PI);
-                heatContext.fillStyle = colorScale(value);
-                heatContext.fill();
-            });
+            function loadGlobeData() {
+                Promise.all([
+                    d3.json('https://skillet64.github.io/498/land-110m.json'),
+                    d3.json('https://skillet64.github.io/498/land-50m.json'),
+                    d3.csv('https://skillet64.github.io/498/Sheet 1-ml-Meteorite_Landings.csv', d => ({
+                        name: d.name,
+                        lat: +d.reclat,
+                        lon: +d.reclong
+                    }))
+                ]).then(([land110m, land50m, meteorites]) => {
+                    pinsData = meteorites;
+                    renderGlobe();
+                });
+            }
 
-            context.globalAlpha = 0.6; // Set the transparency for the heat map
-            context.drawImage(heatCanvas, 0, 0);
-            context.globalAlpha = 1; // Reset transparency
-        }
+            loadGlobeData();
 
-        function loadGlobeData() {
-            Promise.all([
-                d3.json('https://skillet64.github.io/498/land-50m.json'),
-                d3.json('https://skillet64.github.io/498/land-110m.json'),
-                d3.csv('https://skillet64.github.io/498/Sheet 1-ml-Meteorite_Landings.csv')
-            ]).then(([land, borders, pins]) => {
-                landData = land;
-                countryBorders = borders;
-                pinsData = pins;
+            function rotateMap(rotateX, rotateY) {
+                projection.rotate([projection.rotate()[0] + rotateX, projection.rotate()[1] + rotateY]);
                 renderGlobe();
-            }).catch(error => console.error(error));
-        }
-
-        function rotateMap(rotateX, rotateY) {
-            const [x, y] = projection.rotate();
-            projection.rotate([x + rotateX, y + rotateY]);
-            renderGlobe();
-        }
-
-        loadGlobeData();
+            }
+        });
     </script>
 </body>
 </html>
