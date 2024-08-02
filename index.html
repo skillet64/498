@@ -128,7 +128,7 @@
     <script>
         // Define dimensions and margins
         const margin = { top: 20, right: 200, bottom: 100, left: 150 },
-              width = 1500 - margin.left - margin.right,
+              width = 2000 - margin.left - margin.right, // Increased width for better visibility
               height = 600 - margin.top - margin.bottom;
 
         // Define color scheme
@@ -214,60 +214,57 @@
                     tooltip.style("display", "none");
                 });
 
-            horizontalSvg.append("g")
-                .attr("transform", `translate(${margin.left},${height + margin.top})`)
-                .call(d3.axisBottom(x1))
-                .append("text")
-                .attr("class", "axis-label")
-                .attr("x", width)
-                .attr("y", 40)
-                .attr("text-anchor", "end")
-                .attr("fill", "#fff")
-                .text("Mass (g)");
+            // Add x-axis for horizontal bar chart
+            const xAxis1 = d3.axisBottom(x1).ticks(10).tickSize(-height);
+            const yAxis1 = d3.axisLeft(y1);
 
             horizontalSvg.append("g")
-                .attr("transform", `translate(${margin.left},0)`)
-                .call(d3.axisLeft(y1))
-                .append("text")
-                .attr("class", "axis-label")
-                .attr("x", -margin.left)
-                .attr("y", -20)
-                .attr("text-anchor", "start")
-                .attr("fill", "#fff")
-                .text("Meteorite");
+                .attr("transform", `translate(${margin.left},${margin.top + height})`)
+                .call(xAxis1)
+                .selectAll("text")
+                .style("fill", colorScheme.legend)
+                .style("font-size", "12px");
+
+            horizontalSvg.append("g")
+                .attr("transform", `translate(${margin.left},${margin.top})`)
+                .call(yAxis1)
+                .selectAll("text")
+                .style("fill", colorScheme.legend)
+                .style("font-size", "12px");
 
             // Process data for stacked bar chart
-            const stack = d3.stack()
-                .keys(['Found', 'Fell'])
-                .order(d3.stackOrderNone)
-                .offset(d3.stackOffsetNone);
-
-            // Filter out years with zero 'Grand Total'
-            const filteredPivotData = pivotData.filter(d => d['Grand Total'] > 0);
-
-            const stackedData = stack(filteredPivotData);
-
+            const years = Array.from(new Set(pivotData.map(d => d.year))).sort((a, b) => a - b);
+            const categories = ['Fell', 'Found'];
+            
             const x2 = d3.scaleBand()
-                .domain(filteredPivotData.map(d => d.year))
+                .domain(years)
                 .range([0, width])
                 .padding(0.1);
 
             const y2 = d3.scaleLinear()
-                .domain([0, d3.max(filteredPivotData, d => d['Grand Total'])])
-                .nice()
+                .domain([0, d3.max(pivotData, d => d['Grand Total'])])
                 .range([height, 0]);
+
+            const color2 = d3.scaleOrdinal()
+                .domain(categories)
+                .range(['#BDC3C7', '#F1C40F']); // Gray for 'Fell' and yellow for 'Found'
 
             const stackedSvg = stackedContainer.append("svg")
                 .attr("width", width + margin.left + margin.right)
                 .attr("height", height + margin.top + margin.bottom)
                 .attr("class", "chart-svg");
 
-            const barsStacked = stackedSvg.append("g")
-                .attr("transform", `translate(${margin.left},${margin.top})`)
-                .selectAll("g")
-                .data(stackedData)
+            const stackedBars = stackedSvg.append("g")
+                .attr("transform", `translate(${margin.left},${margin.top})`);
+
+            const stack = d3.stack().keys(categories);
+            const series = stack(pivotData);
+
+            stackedBars.selectAll(".layer")
+                .data(series)
                 .enter().append("g")
-                .attr("fill", d => d.key === 'Found' ? colorScheme.foundBar : colorScheme.fellBar)
+                .attr("class", "layer")
+                .attr("fill", d => color2(d.key))
                 .selectAll("rect")
                 .data(d => d)
                 .enter().append("rect")
@@ -275,72 +272,67 @@
                 .attr("y", d => y2(d[1]))
                 .attr("height", d => y2(d[0]) - y2(d[1]))
                 .attr("width", x2.bandwidth())
-                .style("fill", d => d.key === 'Found' ? colorScheme.foundBar : colorScheme.fellBar)
+                .attr("class", "stacked-bar")
                 .on("mouseover", function(event, d) {
                     d3.select(this)
-                        .style("fill", colorScheme.barHover); // Change color on hover
+                        .style("fill", colorScheme.barHover);
                     tooltip
                         .style("display", "block")
-                        .html(`Year Range: ${d.data.year}<br>Total: ${d[1] - d[0]}`);
+                        .html(`Year: ${d.data.year}<br>${d.key}: ${d[1] - d[0]}`);
                 })
                 .on("mousemove", function(event) {
                     tooltip
                         .style("top", (event.pageY + 5) + "px")
                         .style("left", (event.pageX + 5) + "px");
                 })
-                .on("mouseout", function(event, d) {
+                .on("mouseout", function() {
                     d3.select(this)
-                        .style("fill", d.key === 'Found' ? colorScheme.foundBar : colorScheme.fellBar); // Reset color
+                        .style("fill", colorScheme.stackedBar);
                     tooltip.style("display", "none");
                 });
 
-            stackedSvg.append("g")
-                .attr("transform", `translate(${margin.left},${height + margin.top})`)
-                .call(d3.axisBottom(x2).tickFormat(d3.format("d")))
-                .append("text")
-                .attr("class", "axis-label")
-                .attr("x", width)
-                .attr("y", 40)
-                .attr("text-anchor", "end")
-                .attr("fill", "#fff")
-                .text("Year");
+            // Add x-axis and y-axis for stacked bar chart
+            const xAxis2 = d3.axisBottom(x2);
+            const yAxis2 = d3.axisLeft(y2).ticks(10);
 
             stackedSvg.append("g")
-                .attr("transform", `translate(${margin.left},0)`)
-                .call(d3.axisLeft(y2))
-                .append("text")
-                .attr("class", "axis-label")
-                .attr("x", -margin.left)
-                .attr("y", -20)
-                .attr("text-anchor", "start")
-                .attr("fill", "#fff")
-                .text("Count");
+                .attr("transform", `translate(${margin.left},${margin.top + height})`)
+                .call(xAxis2)
+                .selectAll("text")
+                .style("fill", colorScheme.legend)
+                .style("font-size", "12px");
 
-            // Create legend for stacked bar chart
+            stackedSvg.append("g")
+                .attr("transform", `translate(${margin.left},${margin.top})`)
+                .call(yAxis2)
+                .selectAll("text")
+                .style("fill", colorScheme.legend)
+                .style("font-size", "12px");
+
+            // Add a legend
             const legend = legendContainer.append("svg")
                 .attr("width", 200)
-                .attr("height", 100)
-                .selectAll(".legend-item")
-                .data(['Found', 'Fell'])
+                .attr("height", categories.length * 20);
+
+            const legendItems = legend.selectAll(".legend-item")
+                .data(categories)
                 .enter().append("g")
                 .attr("class", "legend-item")
-                .attr("transform", (d, i) => `translate(0, ${i * 25})`);
+                .attr("transform", (d, i) => `translate(0, ${i * 20})`);
 
-            legend.append("rect")
-                .attr("class", "legend-color")
+            legendItems.append("rect")
+                .attr("x", 0)
                 .attr("width", 20)
                 .attr("height", 20)
-                .attr("fill", d => d === 'Found' ? colorScheme.foundBar : colorScheme.fellBar);
+                .style("fill", d => color2(d));
 
-            legend.append("text")
-                .attr("class", "legend")
+            legendItems.append("text")
                 .attr("x", 30)
                 .attr("y", 15)
                 .text(d => d)
-                .attr("fill", colorScheme.legend);
+                .attr("class", "legend");
 
-            // Create a globe map if needed later (removed in this example)
-        });
+        }).catch(error => console.error(error));
     </script>
 </body>
 </html>
