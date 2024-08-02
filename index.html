@@ -160,8 +160,7 @@
             d3.csv('https://skillet64.github.io/498/ml-Meteorite_Landings Pivot-ml-Meteorite_Landings Pivot.csv', d => ({
                 year: +d.fall || 1399,
                 Fell: +d.Fell || 0,
-                Found: +d.Found || 0,
-                'Grand Total': (+d.Fell || 0) + (+d.Found || 0)
+                Found: +d.Found || 0
             })),
             d3.csv('https://skillet64.github.io/498/Sheet 1-ml-Meteorite_Landings.csv', d => ({
                 name: d.name,
@@ -244,27 +243,42 @@
                 .value(d => d.year)
                 .thresholds(d3.range(1400, 2100, 100))(pivotData);
 
+            // Initialize series for stacking
+            const stack = d3.stack()
+                .keys(['Fell', 'Found'])
+                .order(d3.stackOrderNone)
+                .offset(d3.stackOffsetNone);
+
+            // Prepare data for stacking
+            const stackedData = bins.map(bin => {
+                const binData = {
+                    year: bin.x0,
+                    Fell: 0,
+                    Found: 0
+                };
+                bin.forEach(d => {
+                    binData.Fell += d.Fell;
+                    binData.Found += d.Found;
+                });
+                return binData;
+            });
+
+            // Generate stacked data series
+            const series = stack(stackedData);
+
             const x2 = d3.scaleBand()
                 .domain(bins.map(b => `${b.x0}-${b.x1}`))
                 .range([0, width])
                 .padding(0.2);
 
             const y2 = d3.scaleLinear()
-                .domain([0, d3.max(pivotData, d => d['Grand Total'])])
+                .domain([0, d3.max(stackedData, d => d.Fell + d.Found)])
                 .range([height, 0]);
 
             const stackedSvg = stackedContainer.append("svg")
                 .attr("width", width + margin.left + margin.right)
                 .attr("height", height + margin.top + margin.bottom)
                 .attr("class", "chart-svg");
-
-            // Create stacks for "Fell" and "Found"
-            const stack = d3.stack()
-                .keys(['Fell', 'Found'])
-                .order(d3.stackOrderNone)
-                .offset(d3.stackOffsetNone);
-
-            const series = stack(pivotData);
 
             stackedSvg.append("g")
                 .attr("transform", `translate(${margin.left},${margin.top})`)
