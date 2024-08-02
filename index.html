@@ -236,18 +236,18 @@
             horizontalSvg.selectAll(".tick line").remove();
 
             // Bin data into 50-year intervals
-            const binnedData = d3.nest()
-                .key(d => Math.floor(d.year / 50) * 50)
-                .rollup(v => ({
+            const binnedData = Array.from(d3.rollup(
+                pivotData,
+                v => ({
                     Fell: d3.sum(v, d => d.Fell),
                     Found: d3.sum(v, d => d.Found),
                     'Grand Total': d3.sum(v, d => d['Grand Total'])
-                }))
-                .entries(pivotData)
-                .map(d => ({
-                    year: +d.key,
-                    ...d.value
-                }));
+                }),
+                d => Math.floor(d.year / 50) * 50
+            )).map(([year, values]) => ({
+                year: +year,
+                ...values
+            }));
 
             // Update domains for binned data
             const years = binnedData.map(d => d.year);
