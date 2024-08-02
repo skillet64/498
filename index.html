@@ -46,8 +46,11 @@
         .bar-hover {
             fill: #fff; /* White for hover effect */
         }
-        .stacked-bar {
-            fill: #F1C40F; /* Yellow for stacked bars */
+        .stacked-bar-found {
+            fill: #3498DB; /* Blue for "Found" */
+        }
+        .stacked-bar-fell {
+            fill: #E74C3C; /* Red for "Fell" */
         }
         .label {
             font-size: 12px;
@@ -135,7 +138,8 @@
         const colorScheme = {
             bar: '#F1C40F',         // Yellow for bars
             barHover: '#fff',       // White for hover effect
-            scatter: '#F1C40F',     // Yellow for scatter points
+            foundBar: '#3498DB',    // Blue for "Found"
+            fellBar: '#E74C3C',     // Red for "Fell"
             legend: '#fff'          // White for legend text
         };
 
@@ -254,17 +258,27 @@
                 .attr("height", height + margin.top + margin.bottom)
                 .attr("class", "chart-svg");
 
+            // Create stacks for "Fell" and "Found"
+            const stack = d3.stack()
+                .keys(['Fell', 'Found'])
+                .order(d3.stackOrderNone)
+                .offset(d3.stackOffsetNone);
+
+            const series = stack(pivotData);
+
             stackedSvg.append("g")
                 .attr("transform", `translate(${margin.left},${margin.top})`)
                 .selectAll(".stacked-bar")
-                .data(bins)
+                .data(series)
+                .enter().append("g")
+                .selectAll(".stacked-bar")
+                .data(d => d)
                 .enter().append("rect")
-                .attr("class", "stacked-bar")
-                .attr("x", d => x2(`${d.x0}-${d.x1}`))
-                .attr("y", d => y2(d3.sum(d, e => e['Grand Total'])))
+                .attr("class", d => d.key === 'Fell' ? 'stacked-bar-fell' : 'stacked-bar-found')
+                .attr("x", d => x2(`${d.data.year}-${d.data.year + 100}`))
+                .attr("y", d => y2(d[1]))
                 .attr("width", x2.bandwidth())
-                .attr("height", d => height - y2(d3.sum(d, e => e['Grand Total'])))
-                .style("fill", colorScheme.bar);
+                .attr("height", d => y2(d[0]) - y2(d[1]));
 
             stackedSvg.append("g")
                 .attr("transform", `translate(${margin.left},${height + margin.top})`)
@@ -293,8 +307,8 @@
                 .attr("class", "legend")
                 .selectAll(".legend-item")
                 .data([
-                    { color: colorScheme.bar, text: 'Heaviest Meteorites' },
-                    { color: colorScheme.scatter, text: 'Meteorite Landings' }
+                    { color: colorScheme.fellBar, text: 'Fell' },
+                    { color: colorScheme.foundBar, text: 'Found' }
                 ])
                 .enter().append("div")
                 .attr("class", "legend-item")
