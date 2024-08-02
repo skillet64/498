@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Meteorite Data Visualizations</title>
     <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://d3js.org/topojson.v3.min.js"></script>
+    <script src="https://unpkg.com/ts-maps@latest/dist/maps/earth.min.js"></script>
     <style>
         body {
             margin: 0;
@@ -47,7 +49,7 @@
             fill: #fff; /* White for hover effect */
         }
         .stacked-bar {
-            fill: #F1C40F; /* Yellow for stacked bars */
+            fill: #F1C40F; /* Default yellow for bars */
         }
         .label {
             font-size: 12px;
@@ -68,9 +70,6 @@
         .legend {
             font-size: 14px;
             fill: #fff;
-        }
-        .legend rect {
-            stroke-width: 2px;
         }
         .legend-item {
             display: flex;
@@ -122,7 +121,9 @@
             <h2>Meteorite Landings Around the Globe</h2>
             <p>Below is a globe showing locations where meteorites have landed. Hover over the points to see details.</p>
         </div>
-        <!-- Globe container removed -->
+        <div id="globe-container">
+            <!-- Globe will be appended here -->
+        </div>
     </div>
     <div class="tooltip"></div>
     <script>
@@ -135,7 +136,8 @@
         const colorScheme = {
             bar: '#F1C40F',         // Yellow for bars
             barHover: '#fff',       // White for hover effect
-            scatter: '#F1C40F',     // Yellow for scatter points
+            fell: '#E74C3C',        // Red for "Fell"
+            found: '#3498DB',       // Blue for "Found"
             legend: '#fff'          // White for legend text
         };
 
@@ -162,6 +164,9 @@
             console.log('Land 50m:', land50m);
 
             // Process data for horizontal bar chart
+            biggestData.forEach(d => {
+                d.mass = +d['mass (g)'] || 0;
+            });
             biggestData.sort((a, b) => b.mass - a.mass);
 
             const x1 = d3.scaleLinear()
@@ -190,7 +195,6 @@
                 .attr("height", y1.bandwidth())
                 .style("fill", colorScheme.bar)
                 .on("mouseover", function(event, d) {
-                    debugger; // Pause execution here
                     d3.select(this)
                         .style("fill", colorScheme.barHover);
                     tooltip
@@ -230,23 +234,23 @@
                 .attr("fill", "#fff")
                 .text("Meteorite Name");
 
-            // Process data for stacked bar chart with 2 data files
-            const combinedData = pivotData.map(d => ({
-                year: d['Year'],
-                mass: +d['Mass (g)'] || 0
-            }));
+            // Process data for stacked bar chart with "Fell" vs. "Found"
+            pivotData.forEach(d => {
+                d.year = +d.year || 1399;
+                d.Fell = +d.Fell || 0;
+                d.Found = +d.Found || 0;
+                d['Grand Total'] = d.Fell + d.Found;
+            });
 
             const x2 = d3.scaleBand()
-                .domain(combinedData.map(d => d.year))
+                .domain(pivotData.map(d => d.year))
                 .range([0, width])
                 .padding(0.1);
 
             const y2 = d3.scaleLinear()
-                .domain([0, d3.max(combinedData, d => d.mass)])
+                .domain([0, d3.max(pivotData, d => d['Grand Total'])])
                 .nice()
                 .range([height, 0]);
-
-            const colorScale = d3.scaleOrdinal(d3.schemeCategory10);
 
             const stackedSvg = stackedContainer.append("svg")
                 .attr("width", width + margin.left + margin.right)
@@ -254,14 +258,11 @@
                 .attr("class", "chart-svg");
 
             const stack = d3.stack()
-                .keys(['mass'])
-                .order(d3.stackOrderAscending)
+                .keys(['Fell', 'Found'])
+                .order(d3.stackOrderDescending)
                 .offset(d3.stackOffsetDiverging);
 
-            const series = stack(combinedData.map(d => ({
-                year: d.year,
-                mass: d.mass
-            })));
+            const series = stack(pivotData);
 
             stackedSvg.append("g")
                 .attr("transform", `translate(${margin.left},${margin.top})`)
@@ -269,7 +270,7 @@
                 .data(series)
                 .enter().append("g")
                 .attr("class", "layer")
-                .attr("fill", (d, i) => colorScale(i))
+                .attr("fill", (d, i) => colorScheme[d.key.toLowerCase()])
                 .selectAll("rect")
                 .data(d => d)
                 .enter().append("rect")
@@ -299,35 +300,68 @@
                 .attr("y", -10)
                 .attr("text-anchor", "end")
                 .attr("fill", "#fff")
-                .text("Mass (g)");
+                .text("Count");
 
             // Create a legend for stacked bar chart
-            const legend = stackedSvg.selectAll(".legend")
-                .data(colorScale.domain())
-                .enter().append("g")
+            legendContainer.append("div")
                 .attr("class", "legend")
-                .attr("transform", (d, i) => `translate(0,${i * 20})`);
+                .selectAll(".legend-item")
+                .data([
+                    { color: colorScheme.fell, text: 'Fell' },
+                    { color: colorScheme.found, text: 'Found' }
+                ])
+                .enter().append("div")
+                .attr("class", "legend-item")
+                .html(d => `<div class="legend-color" style="background-color: ${d.color};"></div><div class="legend-text">${d.text}</div>`);
 
-            legend.append("rect")
-                .attr("x", width + 20)
-                .attr("width", 18)
-                .attr("height", 18)
-                .style("fill", colorScale);
+            // Create Globe visualization
+            const globeContainer = d3.select("#globe-container");
+            const globeWidth = 800;
+            const globeHeight = 600;
 
-            legend.append("text")
-                .attr("x", width + 45)
-                .attr("y", 9)
-                .attr("dy", ".35em")
-                .style("text-anchor", "start")
-                .text(d => d)
-                .attr("class", "legend-text");
+            const projection = d3.geoOrthographic()
+                .scale(globeWidth / 2)
+                .translate([globeWidth / 2, globeHeight / 2])
+                .clipAngle(90);
+
+            const path = d3.geoPath().projection(projection);
+
+            const globeSvg = globeContainer.append("svg")
+                .attr("width", globeWidth)
+                .attr("height", globeHeight);
+
+            globeSvg.append("path")
+                .datum(topojson.feature(land110m, land110m.objects.countries))
+                .attr("class", "land")
+                .attr("d", path)
+                .style("fill", "#2C3E50")
+                .style("stroke", "#fff")
+                .style("stroke-width", "1px");
+
+            globeSvg.selectAll("circle")
+                .data(meteorites)
+                .enter().append("circle")
+                .attr("cx", d => projection([+d.reclong, +d.reclat])[0])
+                .attr("cy", d => projection([+d.reclong, +d.reclat])[1])
+                .attr("r", 3)
+                .style("fill", "#F1C40F")
+                .on("mouseover", function(event, d) {
+                    tooltip
+                        .style("display", "block")
+                        .html(`Name: ${d.name}<br>Lat: ${+d.reclat.toFixed(2)}<br>Lon: ${+d.reclong.toFixed(2)}`);
+                })
+                .on("mousemove", function(event) {
+                    tooltip
+                        .style("top", (event.pageY + 5) + "px")
+                        .style("left", (event.pageX + 5) + "px");
+                })
+                .on("mouseout", function() {
+                    tooltip.style("display", "none");
+                });
 
         }).catch(error => {
             console.error('Error loading data:', error);
         });
-
-        // Globe visualization
-        // (Implementation details would go here, assuming you want to add the globe later)
     </script>
 </body>
 </html>
